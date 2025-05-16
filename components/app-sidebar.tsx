@@ -2,180 +2,129 @@
 
 import * as React from "react"
 import {
-  IconCamera,
-  IconChartBar,
-  IconDashboard,
-  IconDatabase,
-  IconFileAi,
-  IconFileDescription,
-  IconFileWord,
-  IconFolder,
-  IconHelp,
-  IconInnerShadowTop,
-  IconListDetails,
-  IconReport,
-  IconSearch,
-  IconSettings,
-  IconUsers,
-} from "@tabler/icons-react"
+  AudioWaveform,
+  ServerCog,
+  UserCog,
+} from "lucide-react"
 
-import { NavDocuments } from "@/components/nav-documents"
 import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
 import { NavUser } from "@/components/nav-user"
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
+  SidebarRail,
 } from "@/components/ui/sidebar"
+import { User } from "@/lib/types"
 
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+// Sample navigation data
+const navMainData = [
+  {
+    title: "Dashboard",
+    url: "/dashboard",
+    icon: AudioWaveform,
+    isActive: true,
+    items: [
+      {
+        title: "Transcripts",
+        url: "#",
+        items: [
+          {
+            title: "All Transcripts",
+            url: "#",
+          },
+          {
+            title: "New / In Progress",
+            url: "#",
+          },
+          {
+            title: "Failed / Errors",
+            url: "#",
+          },
+        ]
+      },
+      {
+        title: "Search",
+        url: "#",
+      },
+      {
+        title: "Bookings",
+        url: "#",
+      }
+    ],
   },
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "#",
-      icon: IconDashboard,
-    },
-    {
-      title: "Lifecycle",
-      url: "#",
-      icon: IconListDetails,
-    },
-    {
-      title: "Analytics",
-      url: "#",
-      icon: IconChartBar,
-    },
-    {
-      title: "Projects",
-      url: "#",
-      icon: IconFolder,
-    },
-    {
-      title: "Team",
-      url: "#",
-      icon: IconUsers,
-    },
-  ],
-  navClouds: [
-    {
-      title: "Capture",
-      icon: IconCamera,
-      isActive: true,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Proposal",
-      icon: IconFileDescription,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Prompts",
-      icon: IconFileAi,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-  ],
-  navSecondary: [
-    {
-      title: "Settings",
-      url: "#",
-      icon: IconSettings,
-    },
-    {
-      title: "Get Help",
-      url: "#",
-      icon: IconHelp,
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: IconSearch,
-    },
-  ],
-  documents: [
-    {
-      name: "Data Library",
-      url: "#",
-      icon: IconDatabase,
-    },
-    {
-      name: "Reports",
-      url: "#",
-      icon: IconReport,
-    },
-    {
-      name: "Word Assistant",
-      url: "#",
-      icon: IconFileWord,
-    },
-  ],
+  {
+    title: "System",
+    url: "#",
+    icon: ServerCog,
+    items: [
+      {
+        title: "Processing Queue",
+        url: "#",
+      },
+      {
+        title: "Webhook Logs",
+        url: "#",
+      },
+      {
+        title: "Audio Storage",
+        url: "#",
+      },
+    ],
+  },
+  {
+    title: "Admin",
+    url: "#",
+    icon: UserCog,
+    items: [
+      {
+        title: "Profile",
+        url: "#",
+      },
+      {
+        title: "Settings",
+        url: "#",
+      },
+      {
+        title: "Sign Out",
+        url: "#",
+      },
+    ],
+  },
+]
+
+interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
+  currentUser: User | null;
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar({ currentUser, ...props }: AppSidebarProps) {
+  // Fallback user data if currentUser is null
+  const userData = currentUser ? {
+    name: currentUser.name || "User",
+    email: currentUser.email,
+    avatar: currentUser.image || "/avatars/user.jpg",
+  } : {
+    name: "Guest User",
+    email: "guest@example.com",
+    avatar: "/avatars/user.jpg",
+  }
+
   return (
-    <Sidebar collapsible="offcanvas" {...props}>
+    <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              className="data-[slot=sidebar-menu-button]:!p-1.5"
-            >
-              <a href="#">
-                <IconInnerShadowTop className="!size-5" />
-                <span className="text-base font-semibold">Acme Inc.</span>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <div className="py-2 px-4 flex items-center">
+          <AudioWaveform className="text-primary mr-2" />
+          <span className="font-bold text-lg">TranscriptAI</span>
+        </div>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
-        <NavDocuments items={data.documents} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavMain items={navMainData} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={userData} />
       </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   )
 }

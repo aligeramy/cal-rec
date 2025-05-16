@@ -9,9 +9,13 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar"
 
+import { getCurrentUser } from "@/lib/auth"
+
 import data from "./data.json"
 
-export default function Page() {
+export default async function Page() {
+  const currentUser = await getCurrentUser()
+
   return (
     <SidebarProvider
       style={
@@ -21,7 +25,7 @@ export default function Page() {
         } as React.CSSProperties
       }
     >
-      <AppSidebar variant="inset" />
+      <AppSidebar variant="inset" currentUser={currentUser} />
       <SidebarInset>
         <SiteHeader />
         <div className="flex flex-1 flex-col">

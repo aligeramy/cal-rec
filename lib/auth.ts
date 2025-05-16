@@ -23,7 +23,7 @@ export const {
 
         const user = await prisma.user.findUnique({
           where: {
-            email: credentials.email
+            email: credentials.email as string
           }
         });
 
@@ -31,7 +31,7 @@ export const {
           return null;
         }
 
-        const isValid = await compare(credentials.password, user.password);
+        const isValid = await compare(credentials.password as string, user.password as string);
 
         if (!isValid) {
           return null;
@@ -66,4 +66,23 @@ export const {
       return session;
     },
   },
-}); 
+});
+
+/**
+ * Gets the current user from the database with all their information
+ */
+export async function getCurrentUser() {
+  const session = await auth();
+  
+  if (!session?.user?.id) {
+    return null;
+  }
+
+  const currentUser = await prisma.user.findUnique({
+    where: {
+      id: session.user.id,
+    },
+  });
+
+  return currentUser;
+} 
