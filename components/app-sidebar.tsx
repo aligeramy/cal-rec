@@ -29,19 +29,19 @@ const navMainData = [
     items: [
       {
         title: "Transcripts",
-        url: "#",
+        url: "/dashboard/transcripts",
         items: [
           {
             title: "All Transcripts",
-            url: "#",
+            url: "/dashboard/transcripts",
           },
           {
             title: "New / In Progress",
-            url: "#",
+            url: "/dashboard/transcripts?status=processing",
           },
           {
             title: "Failed / Errors",
-            url: "#",
+            url: "/dashboard/transcripts?status=failed",
           },
         ]
       },

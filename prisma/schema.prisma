@@ -62,3 +62,26 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+model MeetingTranscript {
+  id           String    @id @default(cuid())
+  bookingUid   String    @unique
+  title        String?
+  startTime    DateTime?
+  endTime      DateTime?
+  transcript   String?   @db.Text
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  status       String    @default("pending") // pending, processing, completed, failed
+  
+  // Additional client information
+  clientName   String?
+  clientEmail  String?
+  hostName     String?
+  hostEmail    String?
+  duration     Int?      // Duration in minutes
+  meetingType  String?   // Type of meeting (e.g., "Interview", "Consultation")
+  location     String?   // Could be a URL for virtual meetings or physical address
+  notes        String?   @db.Text
+  recordingUrl String?   // URL to the recording if available
+}
