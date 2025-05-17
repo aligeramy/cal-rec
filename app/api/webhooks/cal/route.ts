@@ -2,20 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 
-// Function to verify the webhook signature
-function verifyCalcomWebhookSignature(
-  payload: string,
-  signature: string,
-  secret: string
-) {
-  const hmac = crypto.createHmac("sha256", secret);
-  const digest = hmac.update(payload).digest("hex");
-  return crypto.timingSafeEqual(
-    Buffer.from(digest),
-    Buffer.from(signature)
-  );
-}
-
 // Simple health check endpoint
 export async function GET() {
   console.log("⚡ Webhook health check requested");
@@ -33,63 +19,46 @@ export async function POST(req: Request) {
   
   try {
     // Get the signature from the header
-    const signature = req.headers.get("cal-signature");
-    if (!signature) {
-      console.error("❌ Missing Cal.com signature header");
+    const signature = req.headers.get("x-cal-signature-256");
+    console.log("🔐 Signature:", signature);
+    
+    // Debug: Log all headers to see what Cal.com is sending
+    console.log("📋 All headers:", Object.fromEntries([...req.headers.entries()]));
+    
+    if (!signature || !process.env.CAL_WEBHOOK_SECRET) {
+      console.error("❌ Missing signature or webhook secret");
       console.log("Headers received:", Object.fromEntries([...req.headers.entries()]));
       return NextResponse.json(
-        { error: "Missing Cal.com signature" },
+        { error: "Missing signature or webhook secret" },
         { status: 401 }
       );
     }
     
-    console.log("✅ Signature header found:", signature);
-
-    // Get the webhook secret from environment variables
-    const webhookSecret = process.env.CAL_WEBHOOK_SECRET;
-    if (!webhookSecret) {
-      console.error("❌ CAL_WEBHOOK_SECRET is not set in environment variables");
-      return NextResponse.json(
-        { error: "Server misconfiguration" },
-        { status: 500 }
-      );
-    }
-    
-    console.log("✅ Webhook secret found in environment");
-
     // Get the raw body for verification
-    const payload = await req.text();
-    console.log("📦 Received payload:", payload.substring(0, 200) + "...");
+    const rawBody = await req.text();
+    console.log("📦 Raw webhook payload:", rawBody.substring(0, 200) + "...");
     
-    // Verify the signature
-    let isValid;
-    try {
-      isValid = verifyCalcomWebhookSignature(
-        payload,
-        signature,
-        webhookSecret
-      );
-      console.log("🔐 Signature verification result:", isValid);
-    } catch (error) {
-      console.error("❌ Error verifying signature:", error);
-      return NextResponse.json(
-        { error: "Error verifying signature" },
-        { status: 401 }
-      );
-    }
-
-    if (!isValid) {
-      console.error("❌ Invalid webhook signature");
-      return NextResponse.json(
-        { error: "Invalid webhook signature" },
-        { status: 401 }
-      );
-    }
-
-    // Parse the JSON payload
-    const data = JSON.parse(payload);
+    const data = JSON.parse(rawBody);
     console.log("📊 Event type:", data.triggerEvent);
-    console.log("📅 Booking UID:", data.bookingUid);
+    
+    // Generate HMAC directly like the working code
+    const hmac = crypto.createHmac("sha256", process.env.CAL_WEBHOOK_SECRET);
+    hmac.update(rawBody);
+    const calculatedSignature = hmac.digest("hex");
+    
+    console.log("🔐 Calculated signature:", calculatedSignature);
+    console.log("🔐 Received signature:", signature);
+    
+    // Compare signatures
+    if (calculatedSignature !== signature) {
+      console.error("❌ Signature mismatch");
+      return NextResponse.json(
+        { error: "Invalid signature" },
+        { status: 401 }
+      );
+    }
+    
+    console.log("✅ Signature verified successfully");
 
     // Handle different event types
     if (data.triggerEvent === "BOOKING_CREATED") {

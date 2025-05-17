@@ -1,21 +1,16 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 
+// This is a direct test using the provided webhook secret
 export async function GET() {
   try {
+    // Use the explicitly provided webhook secret for testing
+    const webhookSecret = "kIcx1x5uamWgZQ3n00DHfodONd8Ga9RcX8YZZZDfP+o=";
+    
     // Get the webhook endpoint URL
     const webhookUrl = process.env.NEXT_PUBLIC_URL 
       ? `${process.env.NEXT_PUBLIC_URL}/api/webhooks/cal` 
       : "https://cal.softx.ca/api/webhooks/cal";
-      
-    // Get the webhook secret
-    const webhookSecret = process.env.CAL_WEBHOOK_SECRET;
-    if (!webhookSecret) {
-      return NextResponse.json(
-        { error: "CAL_WEBHOOK_SECRET is not set in environment variables" },
-        { status: 500 }
-      );
-    }
     
     // Create a sample booking created event
     const bookingCreatedPayload = {
@@ -37,17 +32,20 @@ export async function GET() {
     
     const payloadString = JSON.stringify(bookingCreatedPayload);
     
-    // Generate the signature exactly as Cal.com does it
+    // Generate the signature using the explicitly provided webhook secret
     const hmac = crypto.createHmac("sha256", webhookSecret);
-    const signature = hmac.update(payloadString).digest("hex");
+    hmac.update(payloadString);
+    const signature = hmac.digest("hex");
+    
+    console.log("🧪 Testing webhook with provided webhook secret");
+    console.log("🔐 Generated signature:", signature);
     
     // Make the actual HTTP request to our webhook
-    console.log("🧪 Testing webhook with signature:", signature);
     const response = await fetch(webhookUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "cal-signature": signature
+        "x-cal-signature-256": signature
       },
       body: payloadString
     });
@@ -62,7 +60,7 @@ export async function GET() {
     }
     
     return NextResponse.json({
-      message: "Webhook test completed",
+      message: "Direct webhook test completed",
       status: response.status,
       success: response.ok,
       response: responseData,
@@ -70,7 +68,7 @@ export async function GET() {
         url: webhookUrl,
         headers: {
           "Content-Type": "application/json",
-          "cal-signature": signature
+          "x-cal-signature-256": signature
         },
         body: bookingCreatedPayload
       }
