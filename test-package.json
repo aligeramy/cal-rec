@@ -1,0 +1,13 @@
+{
+  "name": "transcription-service-test",
+  "version": "1.0.0",
+  "description": "Test script for transcription service",
+  "main": "test-transcription.js",
+  "type": "module",
+  "scripts": {
+    "test": "node test-transcription.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.7"
+  }
+} 

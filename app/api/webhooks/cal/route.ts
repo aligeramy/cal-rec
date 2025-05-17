@@ -33,7 +33,7 @@ export async function POST(req: Request) {
         { status: 401 }
       );
     }
-    
+
     // Get the raw body for verification
     const rawBody = await req.text();
     console.log("📦 Raw webhook payload:", rawBody.substring(0, 200) + "...");
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
         { status: 401 }
       );
     }
-    
+
     console.log("✅ Signature verified successfully");
 
     // Process the webhook based on the type
@@ -101,53 +101,53 @@ export async function POST(req: Request) {
       }
       
       // Extract client/attendee info
-      const attendees = eventPayload?.attendees || [];
+    const attendees = eventPayload?.attendees || [];
       const clientAttendee = attendees.find((a: { email: string }) => a.email !== organizer.email) || {};
-      
-      const clientName = clientAttendee.name;
-      const clientEmail = clientAttendee.email;
-      const hostName = organizer.name;
-      const hostEmail = organizer.email;
-      const notes = eventPayload?.description;
-      const meetingType = eventPayload?.eventType?.title;
-      
-      // Calculate duration in minutes if both start and end times are available
-      let duration = null;
-      if (startTime && endTime) {
-        const start = new Date(startTime);
-        const end = new Date(endTime);
-        duration = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
-      }
+    
+    const clientName = clientAttendee.name;
+    const clientEmail = clientAttendee.email;
+    const hostName = organizer.name;
+    const hostEmail = organizer.email;
+    const notes = eventPayload?.description;
+    const meetingType = eventPayload?.eventType?.title;
+    
+    // Calculate duration in minutes if both start and end times are available
+    let duration = null;
+    if (startTime && endTime) {
+      const start = new Date(startTime);
+      const end = new Date(endTime);
+      duration = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
+    }
 
       // Create booking record in database - use meeting transcript table
-      const transcript = await prisma.meetingTranscript.upsert({
+    const transcript = await prisma.meetingTranscript.upsert({
         where: { bookingUid: uid },
-        update: { 
-          title,
-          startTime: startTime ? new Date(startTime) : undefined,
-          endTime: endTime ? new Date(endTime) : undefined,
+      update: { 
+        title,
+        startTime: startTime ? new Date(startTime) : undefined,
+        endTime: endTime ? new Date(endTime) : undefined,
           status: "pending",
-          clientName,
-          clientEmail,
-          hostName,
-          hostEmail,
-          duration,
-          meetingType,
+        clientName,
+        clientEmail,
+        hostName,
+        hostEmail,
+        duration,
+        meetingType,
           location: meetingLink || location, // Use meeting link if available
           notes
-        },
-        create: {
+      },
+      create: {
           bookingUid: uid,
-          title,
-          startTime: startTime ? new Date(startTime) : undefined,
-          endTime: endTime ? new Date(endTime) : undefined,
+        title,
+        startTime: startTime ? new Date(startTime) : undefined,
+        endTime: endTime ? new Date(endTime) : undefined,
           status: "pending",
-          clientName,
-          clientEmail,
-          hostName,
-          hostEmail,
-          duration,
-          meetingType,
+        clientName,
+        clientEmail,
+        hostName,
+        hostEmail,
+        duration,
+        meetingType,
           location: meetingLink || location, // Use meeting link if available
           notes
         }
@@ -204,8 +204,8 @@ export async function POST(req: Request) {
           data: { 
             endTime: new Date(),
             status: transcript.status === "pending" ? "completed" : transcript.status
-          }
-        });
+      }
+    });
         console.log("✅ Transcript updated:", updated.id);
       } else {
         console.log("❓ No transcript found to update end time");
@@ -221,21 +221,20 @@ export async function POST(req: Request) {
       console.log("🎥 Recording ready, processing for transcription");
       // Extract needed data
       const { 
-        uid,
-        downloadUrl
+        uid 
       } = eventPayload;
 
-      if (!uid || !downloadUrl) {
-        console.error("❌ Missing required fields in webhook payload", { uid, hasDownloadUrl: !!downloadUrl });
+      if (!uid) {
+        console.error("❌ Missing required fields in webhook payload", { uid });
         return NextResponse.json(
           { error: "Missing required fields in webhook payload" },
           { status: 400 }
         );
       }
 
-      console.log("🔍 Found recording URL:", downloadUrl);
+      console.log("🔍 Cal.com notified us that a recording is ready for booking:", uid);
 
-      // Update meeting transcript record with recording URL
+      // Update meeting transcript record with recording status
       const transcript = await prisma.meetingTranscript.findUnique({
         where: { bookingUid: uid },
       });
@@ -248,11 +247,98 @@ export async function POST(req: Request) {
         );
       }
 
+      // Set status to processing while we fetch the recording
+      await prisma.meetingTranscript.update({
+        where: { id: transcript.id },
+        data: { 
+          status: "processing"
+        }
+      });
+
+      console.log("✅ Updated database record status to processing:", transcript.id);
+
+      // Fetch the recording download link from Cal.com API
+      console.log("🔄 Fetching recording download link from Cal.com API");
+      const calApiKey = process.env.CALCOM_API || process.env.CAL_API_KEY;
+      
+      if (!calApiKey) {
+        console.error("❌ Cal.com API key not found in environment variables");
+        
+        // Update status to failed
+        await prisma.meetingTranscript.update({
+          where: { id: transcript.id },
+          data: { status: "failed" }
+        });
+        
+        return NextResponse.json(
+          { error: "Cal.com API key missing" },
+          { status: 500 }
+        );
+      }
+      
+      // Make API call to Cal.com to get recording download links
+      const recordingsResponse = await fetch(`https://api.cal.com/v1/bookings/${uid}/recordings?apiKey=${calApiKey}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+      
+      if (!recordingsResponse.ok) {
+        console.error(`❌ Failed to fetch recordings from Cal.com API: ${recordingsResponse.status} ${recordingsResponse.statusText}`);
+        
+        // Update status to failed
+        await prisma.meetingTranscript.update({
+          where: { id: transcript.id },
+          data: { status: "failed" }
+        });
+        
+        return NextResponse.json(
+          { error: "Failed to fetch recording from Cal.com" },
+          { status: 500 }
+        );
+      }
+      
+      const recordings = await recordingsResponse.json();
+      console.log("📋 Recordings data:", JSON.stringify(recordings, null, 2));
+      
+      if (!recordings || recordings.length === 0) {
+        console.error("❌ No recordings found for this booking");
+        
+        // Update status to failed
+        await prisma.meetingTranscript.update({
+          where: { id: transcript.id },
+          data: { status: "failed" }
+        });
+        
+        return NextResponse.json(
+          { error: "No recordings found for this booking" },
+          { status: 404 }
+        );
+      }
+      
+      // Get the first recording's download link
+      const downloadUrl = recordings[0].download_link;
+      
+      if (!downloadUrl) {
+        console.error("❌ No download link found in the recording data");
+        
+        // Update status to failed
+        await prisma.meetingTranscript.update({
+          where: { id: transcript.id },
+          data: { status: "failed" }
+        });
+        
+        return NextResponse.json(
+          { error: "No download link found in the recording data" },
+          { status: 500 }
+        );
+      }
+
       // Update the transcript with recording URL
       const updated = await prisma.meetingTranscript.update({
         where: { id: transcript.id },
         data: { 
-          status: "processing",
           recordingUrl: downloadUrl
         }
       });
