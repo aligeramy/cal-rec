@@ -64,15 +64,16 @@ model VerificationToken {
 }
 
 model MeetingTranscript {
-  id         String    @id @default(cuid())
-  bookingUid String    @unique
-  title      String?
-  startTime  DateTime?
-  endTime    DateTime?
-  transcript String?   @db.Text
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  status     String    @default("pending") // pending, processing, completed, failed
+  id             String    @id @default(cuid())
+  bookingUid     String    @unique
+  title          String?
+  startTime      DateTime?
+  endTime        DateTime?
+  transcript     String?   @db.Text
+  transcriptJson Json? // Structured transcript data with timestamps
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  status         String    @default("pending") // pending, processing, completed, failed
 
   // Additional client information
   clientName   String?

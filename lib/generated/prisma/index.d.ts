@@ -5675,6 +5675,7 @@ export namespace Prisma {
     startTime: number
     endTime: number
     transcript: number
+    transcriptJson: number
     createdAt: number
     updatedAt: number
     status: number
@@ -5748,6 +5749,7 @@ export namespace Prisma {
     startTime?: true
     endTime?: true
     transcript?: true
+    transcriptJson?: true
     createdAt?: true
     updatedAt?: true
     status?: true
@@ -5856,6 +5858,7 @@ export namespace Prisma {
     startTime: Date | null
     endTime: Date | null
     transcript: string | null
+    transcriptJson: JsonValue | null
     createdAt: Date
     updatedAt: Date
     status: string
@@ -5896,6 +5899,7 @@ export namespace Prisma {
     startTime?: boolean
     endTime?: boolean
     transcript?: boolean
+    transcriptJson?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     status?: boolean
@@ -5917,6 +5921,7 @@ export namespace Prisma {
     startTime?: boolean
     endTime?: boolean
     transcript?: boolean
+    transcriptJson?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     status?: boolean
@@ -5938,6 +5943,7 @@ export namespace Prisma {
     startTime?: boolean
     endTime?: boolean
     transcript?: boolean
+    transcriptJson?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     status?: boolean
@@ -5959,6 +5965,7 @@ export namespace Prisma {
     startTime?: boolean
     endTime?: boolean
     transcript?: boolean
+    transcriptJson?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     status?: boolean
@@ -5973,7 +5980,7 @@ export namespace Prisma {
     recordingUrl?: boolean
   }
 
-  export type MeetingTranscriptOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "bookingUid" | "title" | "startTime" | "endTime" | "transcript" | "createdAt" | "updatedAt" | "status" | "clientName" | "clientEmail" | "hostName" | "hostEmail" | "duration" | "meetingType" | "location" | "notes" | "recordingUrl", ExtArgs["result"]["meetingTranscript"]>
+  export type MeetingTranscriptOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "bookingUid" | "title" | "startTime" | "endTime" | "transcript" | "transcriptJson" | "createdAt" | "updatedAt" | "status" | "clientName" | "clientEmail" | "hostName" | "hostEmail" | "duration" | "meetingType" | "location" | "notes" | "recordingUrl", ExtArgs["result"]["meetingTranscript"]>
 
   export type $MeetingTranscriptPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "MeetingTranscript"
@@ -5985,6 +5992,7 @@ export namespace Prisma {
       startTime: Date | null
       endTime: Date | null
       transcript: string | null
+      transcriptJson: Prisma.JsonValue | null
       createdAt: Date
       updatedAt: Date
       status: string
@@ -6426,6 +6434,7 @@ export namespace Prisma {
     readonly startTime: FieldRef<"MeetingTranscript", 'DateTime'>
     readonly endTime: FieldRef<"MeetingTranscript", 'DateTime'>
     readonly transcript: FieldRef<"MeetingTranscript", 'String'>
+    readonly transcriptJson: FieldRef<"MeetingTranscript", 'Json'>
     readonly createdAt: FieldRef<"MeetingTranscript", 'DateTime'>
     readonly updatedAt: FieldRef<"MeetingTranscript", 'DateTime'>
     readonly status: FieldRef<"MeetingTranscript", 'String'>
@@ -6876,6 +6885,7 @@ export namespace Prisma {
     startTime: 'startTime',
     endTime: 'endTime',
     transcript: 'transcript',
+    transcriptJson: 'transcriptJson',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt',
     status: 'status',
@@ -6901,6 +6911,14 @@ export namespace Prisma {
   export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
+  export const NullableJsonNullValueInput: {
+    DbNull: typeof DbNull,
+    JsonNull: typeof JsonNull
+  };
+
+  export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
+
+
   export const QueryMode: {
     default: 'default',
     insensitive: 'insensitive'
@@ -6915,6 +6933,15 @@ export namespace Prisma {
   };
 
   export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+  export const JsonNullValueFilter: {
+    DbNull: typeof DbNull,
+    JsonNull: typeof JsonNull,
+    AnyNull: typeof AnyNull
+  };
+
+  export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
 
 
   /**
@@ -6961,6 +6988,20 @@ export namespace Prisma {
    * Reference to a field of type 'Int[]'
    */
   export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+  /**
+   * Reference to a field of type 'Json'
+   */
+  export type JsonFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Json'>
+    
+
+
+  /**
+   * Reference to a field of type 'QueryMode'
+   */
+  export type EnumQueryModeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'QueryMode'>
     
 
 
@@ -7250,6 +7291,7 @@ export namespace Prisma {
     startTime?: DateTimeNullableFilter<"MeetingTranscript"> | Date | string | null
     endTime?: DateTimeNullableFilter<"MeetingTranscript"> | Date | string | null
     transcript?: StringNullableFilter<"MeetingTranscript"> | string | null
+    transcriptJson?: JsonNullableFilter<"MeetingTranscript">
     createdAt?: DateTimeFilter<"MeetingTranscript"> | Date | string
     updatedAt?: DateTimeFilter<"MeetingTranscript"> | Date | string
     status?: StringFilter<"MeetingTranscript"> | string
@@ -7271,6 +7313,7 @@ export namespace Prisma {
     startTime?: SortOrderInput | SortOrder
     endTime?: SortOrderInput | SortOrder
     transcript?: SortOrderInput | SortOrder
+    transcriptJson?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     status?: SortOrder
@@ -7295,6 +7338,7 @@ export namespace Prisma {
     startTime?: DateTimeNullableFilter<"MeetingTranscript"> | Date | string | null
     endTime?: DateTimeNullableFilter<"MeetingTranscript"> | Date | string | null
     transcript?: StringNullableFilter<"MeetingTranscript"> | string | null
+    transcriptJson?: JsonNullableFilter<"MeetingTranscript">
     createdAt?: DateTimeFilter<"MeetingTranscript"> | Date | string
     updatedAt?: DateTimeFilter<"MeetingTranscript"> | Date | string
     status?: StringFilter<"MeetingTranscript"> | string
@@ -7316,6 +7360,7 @@ export namespace Prisma {
     startTime?: SortOrderInput | SortOrder
     endTime?: SortOrderInput | SortOrder
     transcript?: SortOrderInput | SortOrder
+    transcriptJson?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     status?: SortOrder
@@ -7345,6 +7390,7 @@ export namespace Prisma {
     startTime?: DateTimeNullableWithAggregatesFilter<"MeetingTranscript"> | Date | string | null
     endTime?: DateTimeNullableWithAggregatesFilter<"MeetingTranscript"> | Date | string | null
     transcript?: StringNullableWithAggregatesFilter<"MeetingTranscript"> | string | null
+    transcriptJson?: JsonNullableWithAggregatesFilter<"MeetingTranscript">
     createdAt?: DateTimeWithAggregatesFilter<"MeetingTranscript"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"MeetingTranscript"> | Date | string
     status?: StringWithAggregatesFilter<"MeetingTranscript"> | string
@@ -7645,6 +7691,7 @@ export namespace Prisma {
     startTime?: Date | string | null
     endTime?: Date | string | null
     transcript?: string | null
+    transcriptJson?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
     status?: string
@@ -7666,6 +7713,7 @@ export namespace Prisma {
     startTime?: Date | string | null
     endTime?: Date | string | null
     transcript?: string | null
+    transcriptJson?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
     status?: string
@@ -7687,6 +7735,7 @@ export namespace Prisma {
     startTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     transcript?: NullableStringFieldUpdateOperationsInput | string | null
+    transcriptJson?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     status?: StringFieldUpdateOperationsInput | string
@@ -7708,6 +7757,7 @@ export namespace Prisma {
     startTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     transcript?: NullableStringFieldUpdateOperationsInput | string | null
+    transcriptJson?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     status?: StringFieldUpdateOperationsInput | string
@@ -7729,6 +7779,7 @@ export namespace Prisma {
     startTime?: Date | string | null
     endTime?: Date | string | null
     transcript?: string | null
+    transcriptJson?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: Date | string
     updatedAt?: Date | string
     status?: string
@@ -7750,6 +7801,7 @@ export namespace Prisma {
     startTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     transcript?: NullableStringFieldUpdateOperationsInput | string | null
+    transcriptJson?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     status?: StringFieldUpdateOperationsInput | string
@@ -7771,6 +7823,7 @@ export namespace Prisma {
     startTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     endTime?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     transcript?: NullableStringFieldUpdateOperationsInput | string | null
+    transcriptJson?: NullableJsonNullValueInput | InputJsonValue
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     status?: StringFieldUpdateOperationsInput | string
@@ -8092,6 +8145,29 @@ export namespace Prisma {
     token?: SortOrder
     expires?: SortOrder
   }
+  export type JsonNullableFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonNullableFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonNullableFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonNullableFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
 
   export type MeetingTranscriptCountOrderByAggregateInput = {
     id?: SortOrder
@@ -8100,6 +8176,7 @@ export namespace Prisma {
     startTime?: SortOrder
     endTime?: SortOrder
     transcript?: SortOrder
+    transcriptJson?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     status?: SortOrder
@@ -8162,6 +8239,32 @@ export namespace Prisma {
 
   export type MeetingTranscriptSumOrderByAggregateInput = {
     duration?: SortOrder
+  }
+  export type JsonNullableWithAggregatesFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonNullableWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonNullableWithAggregatesFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    _count?: NestedIntNullableFilter<$PrismaModel>
+    _min?: NestedJsonNullableFilter<$PrismaModel>
+    _max?: NestedJsonNullableFilter<$PrismaModel>
   }
 
   export type AccountCreateNestedManyWithoutUserInput = {
@@ -8459,6 +8562,29 @@ export namespace Prisma {
     gt?: number | FloatFieldRefInput<$PrismaModel>
     gte?: number | FloatFieldRefInput<$PrismaModel>
     not?: NestedFloatNullableFilter<$PrismaModel> | number | null
+  }
+  export type NestedJsonNullableFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<NestedJsonNullableFilterBase<$PrismaModel>>, Exclude<keyof Required<NestedJsonNullableFilterBase<$PrismaModel>>, 'path'>>,
+        Required<NestedJsonNullableFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<NestedJsonNullableFilterBase<$PrismaModel>>, 'path'>>
+
+  export type NestedJsonNullableFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string[]
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
   export type AccountCreateWithoutUserInput = {

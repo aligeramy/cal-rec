@@ -70,6 +70,7 @@ model MeetingTranscript {
   startTime    DateTime?
   endTime      DateTime?
   transcript   String?   @db.Text
+  transcriptJson Json?    // Structured transcript data with timestamps
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   status       String    @default("pending") // pending, processing, completed, failed
