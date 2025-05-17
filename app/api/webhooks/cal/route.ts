@@ -60,28 +60,54 @@ export async function POST(req: Request) {
     
     console.log("✅ Signature verified successfully");
 
-    // Handle different event types
-    if (data.triggerEvent === "BOOKING_CREATED") {
-      console.log("🆕 New booking created, saving to database");
-      // Extract needed data
-      const { 
-        bookingUid, 
-        title, 
-        startTime,
-        endTime,
-        payload: eventPayload 
-      } = data;
+    // Process the webhook based on the type
+    const { triggerEvent, payload: eventPayload } = data;
+    console.log("📊 Event type:", triggerEvent);
+    console.log("📦 Event payload:", eventPayload);
 
-      // Extract more details if available
+    if (triggerEvent === "BOOKING_CREATED") {
+      console.log("🆕 New booking created, saving to database");
+      
+      // Extract fields matching your previous working code
+      const { uid, title, startTime, endTime, organizer, location, metadata, conferenceData } = eventPayload;
+      console.log("📝 New booking details:", { uid, title, startTime, endTime });
+      
+      // Extract meeting link - could be Google Meet, Zoom, etc.
+      let meetingLink = null;
+      
+      // Check for conference data (Google Meet, Zoom, etc.)
+      if (conferenceData?.entryPoints?.length > 0) {
+        // Find video entry point
+        const videoEntry = conferenceData.entryPoints.find((ep: { entryPointType: string, uri: string }) => ep.entryPointType === 'video');
+        if (videoEntry) {
+          meetingLink = videoEntry.uri;
+          console.log('🔗 Found meeting link from conferenceData:', meetingLink);
+        }
+      }
+      
+      // If no conferenceData, check location for meeting URLs
+      if (!meetingLink && location) {
+        // Check if location is a URL
+        if (location.startsWith('http') || location.includes('meet.google.com') || location.includes('zoom.us')) {
+          meetingLink = location;
+          console.log('🔗 Found meeting link from location:', meetingLink);
+        }
+      }
+      
+      // If still no link, check metadata for custom fields
+      if (!meetingLink && metadata?.videoCallUrl) {
+        meetingLink = metadata.videoCallUrl;
+        console.log('🔗 Found meeting link from metadata:', meetingLink);
+      }
+      
+      // Extract client/attendee info
       const attendees = eventPayload?.attendees || [];
-      const organizer = eventPayload?.organizer || {};
       const clientAttendee = attendees.find((a: { email: string }) => a.email !== organizer.email) || {};
       
       const clientName = clientAttendee.name;
       const clientEmail = clientAttendee.email;
       const hostName = organizer.name;
       const hostEmail = organizer.email;
-      const location = eventPayload?.location;
       const notes = eventPayload?.description;
       const meetingType = eventPayload?.eventType?.title;
       
@@ -93,9 +119,9 @@ export async function POST(req: Request) {
         duration = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
       }
 
-      // Create booking record in database
-      await prisma.meetingTranscript.upsert({
-        where: { bookingUid },
+      // Create booking record in database - use meeting transcript table
+      const transcript = await prisma.meetingTranscript.upsert({
+        where: { bookingUid: uid },
         update: { 
           title,
           startTime: startTime ? new Date(startTime) : undefined,
@@ -107,11 +133,11 @@ export async function POST(req: Request) {
           hostEmail,
           duration,
           meetingType,
-          location,
+          location: meetingLink || location, // Use meeting link if available
           notes
         },
         create: {
-          bookingUid,
+          bookingUid: uid,
           title,
           startTime: startTime ? new Date(startTime) : undefined,
           endTime: endTime ? new Date(endTime) : undefined,
@@ -122,55 +148,85 @@ export async function POST(req: Request) {
           hostEmail,
           duration,
           meetingType,
-          location,
+          location: meetingLink || location, // Use meeting link if available
           notes
         }
       });
 
-      console.log("✅ Successfully saved booking to database");
+      console.log("✅ Successfully saved booking to database:", transcript.id);
       return NextResponse.json(
-        { message: "Booking created successfully" },
+        { message: "Booking created successfully", id: transcript.id },
         { status: 200 }
       );
+    } 
+    else if (triggerEvent === "BOOKING_CANCELLED") {
+      // Meeting was cancelled
+      const { uid } = eventPayload;
+      console.log("❌ Booking cancelled:", uid);
+      
+      // Find the meeting transcript
+      const transcript = await prisma.meetingTranscript.findUnique({
+        where: { bookingUid: uid },
+      });
+      
+      if (transcript) {
+        console.log("🔍 Found transcript to cancel:", transcript.id);
+        // Update status to cancelled
+        await prisma.meetingTranscript.update({
+          where: { id: transcript.id },
+          data: { status: "cancelled" }
+        });
+        console.log("✅ Transcript marked as cancelled");
+      } else {
+        console.log("❓ No transcript found for cancellation");
+      }
+      
+      return NextResponse.json({ 
+        message: "Booking cancellation processed",
+        success: true 
+      });
     }
-    
+    else if (triggerEvent === "MEETING_ENDED") {
+      // Meeting has ended
+      const { uid } = eventPayload;
+      console.log("🏁 Meeting ended:", uid);
+      
+      // Find the transcript
+      const transcript = await prisma.meetingTranscript.findUnique({
+        where: { bookingUid: uid },
+      });
+      
+      if (transcript) {
+        console.log("🔍 Found transcript to update end time:", transcript.id);
+        // Update the transcript end time
+        const updated = await prisma.meetingTranscript.update({
+          where: { id: transcript.id },
+          data: { 
+            endTime: new Date(),
+            status: transcript.status === "pending" ? "completed" : transcript.status
+          }
+        });
+        console.log("✅ Transcript updated:", updated.id);
+      } else {
+        console.log("❓ No transcript found to update end time");
+      }
+      
+      return NextResponse.json({ 
+        message: "Meeting end processed",
+        success: true 
+      });
+    }
     // Check if this is a RECORDING_READY event
-    if (data.triggerEvent === "RECORDING_READY") {
+    else if (triggerEvent === "RECORDING_READY") {
       console.log("🎥 Recording ready, processing for transcription");
       // Extract needed data
       const { 
-        bookingUid, 
-        title, 
-        startTime,
-        endTime,
-        payload: eventPayload 
-      } = data;
+        uid,
+        downloadUrl
+      } = eventPayload;
 
-      // Extract more details if available
-      const attendees = eventPayload?.attendees || [];
-      const organizer = eventPayload?.organizer || {};
-      const clientAttendee = attendees.find((a: { email: string }) => a.email !== organizer.email) || {};
-      
-      const clientName = clientAttendee.name;
-      const clientEmail = clientAttendee.email;
-      const hostName = organizer.name;
-      const hostEmail = organizer.email;
-      const location = eventPayload?.location;
-      const notes = eventPayload?.description;
-      const meetingType = eventPayload?.eventType?.title;
-      
-      // Calculate duration in minutes if both start and end times are available
-      let duration = null;
-      if (startTime && endTime) {
-        const start = new Date(startTime);
-        const end = new Date(endTime);
-        duration = Math.round((end.getTime() - start.getTime()) / (1000 * 60));
-      }
-
-      const downloadUrl = eventPayload?.downloadUrl;
-
-      if (!bookingUid || !downloadUrl) {
-        console.error("❌ Missing required fields in webhook payload", { bookingUid, hasDownloadUrl: !!downloadUrl });
+      if (!uid || !downloadUrl) {
+        console.error("❌ Missing required fields in webhook payload", { uid, hasDownloadUrl: !!downloadUrl });
         return NextResponse.json(
           { error: "Missing required fields in webhook payload" },
           { status: 400 }
@@ -179,43 +235,29 @@ export async function POST(req: Request) {
 
       console.log("🔍 Found recording URL:", downloadUrl);
 
-      // Create or update meeting transcript record in database with all available information
-      const transcript = await prisma.meetingTranscript.upsert({
-        where: { bookingUid },
-        update: { 
-          title,
-          startTime: startTime ? new Date(startTime) : undefined,
-          endTime: endTime ? new Date(endTime) : undefined,
+      // Update meeting transcript record with recording URL
+      const transcript = await prisma.meetingTranscript.findUnique({
+        where: { bookingUid: uid },
+      });
+
+      if (!transcript) {
+        console.error("❌ No transcript found for recording:", uid);
+        return NextResponse.json(
+          { error: "No transcript found for this recording" },
+          { status: 404 }
+        );
+      }
+
+      // Update the transcript with recording URL
+      const updated = await prisma.meetingTranscript.update({
+        where: { id: transcript.id },
+        data: { 
           status: "processing",
-          clientName,
-          clientEmail,
-          hostName,
-          hostEmail,
-          duration,
-          meetingType,
-          location,
-          notes,
-          recordingUrl: downloadUrl
-        },
-        create: {
-          bookingUid,
-          title,
-          startTime: startTime ? new Date(startTime) : undefined,
-          endTime: endTime ? new Date(endTime) : undefined,
-          status: "processing",
-          clientName,
-          clientEmail,
-          hostName,
-          hostEmail,
-          duration,
-          meetingType,
-          location,
-          notes,
           recordingUrl: downloadUrl
         }
       });
 
-      console.log("✅ Updated database record with recording URL");
+      console.log("✅ Updated database record with recording URL:", updated.id);
 
       // Send the recording to the VPS for processing
       console.log("🚀 Sending recording to transcription service");
@@ -229,12 +271,12 @@ export async function POST(req: Request) {
         },
         body: JSON.stringify({
           downloadUrl,
-          bookingUid,
-          title,
-          startTime,
-          endTime,
-          clientName,
-          clientEmail,
+          bookingUid: uid,
+          title: transcript.title,
+          startTime: transcript.startTime,
+          endTime: transcript.endTime,
+          clientName: transcript.clientName,
+          clientEmail: transcript.clientEmail,
           callbackUrl
         })
       });
@@ -256,17 +298,17 @@ export async function POST(req: Request) {
       }
 
       console.log("✅ Successfully sent recording for transcription");
-      return NextResponse.json(
-        { message: "Webhook received and processing started", id: transcript.id },
-        { status: 200 }
-      );
+      return NextResponse.json({
+        message: "Recording processing started", 
+        id: transcript.id
+      });
     }
 
-    console.log("ℹ️ Received unhandled event type:", data.triggerEvent);
-    return NextResponse.json(
-      { message: `Ignoring ${data.triggerEvent} event` },
-      { status: 200 }
-    );
+    console.log("ℹ️ Received unhandled event type:", triggerEvent);
+    return NextResponse.json({
+      message: `Processed ${triggerEvent} event`,
+      success: true
+    });
   } catch (error) {
     console.error("❌ Error processing Cal.com webhook:", error);
     return NextResponse.json(
