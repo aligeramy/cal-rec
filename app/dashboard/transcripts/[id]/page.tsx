@@ -5,12 +5,12 @@ import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { MeetingTranscript } from "@/lib/types";
 
-type Props = {
-  params: { id: string };
-  searchParams: { [key: string]: string | string[] | undefined };
-};
-
-export default async function TranscriptDetailPage({ params }: Props) {
+export default async function TranscriptDetailPage({ 
+  params 
+}: { 
+  params: Promise<{ id: string }> 
+}) {
+  const { id } = await params;
   const session = await auth();
 
   if (!session) {
@@ -19,7 +19,7 @@ export default async function TranscriptDetailPage({ params }: Props) {
 
   const transcript = await prisma.meetingTranscript.findUnique({
     where: {
-      id: params.id,
+      id,
     },
   }) as MeetingTranscript | null;
 

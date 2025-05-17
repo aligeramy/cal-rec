@@ -5,12 +5,12 @@ import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { MeetingTranscript } from "@/lib/types";
 
-type Props = {
-  params: Record<string, never>;
-  searchParams: { status?: string };
-};
-
-export default async function TranscriptsPage({ searchParams }: Props) {
+export default async function TranscriptsPage({ 
+  searchParams 
+}: { 
+  searchParams: Promise<{ status?: string }> 
+}) {
+  const resolvedSearchParams = await searchParams;
   const session = await auth();
 
   if (!session) {
@@ -18,7 +18,7 @@ export default async function TranscriptsPage({ searchParams }: Props) {
   }
 
   // Get the status filter from search params if it exists
-  const statusFilter = searchParams?.status;
+  const statusFilter = resolvedSearchParams?.status;
 
   // Build the where clause based on status filter
   const where = statusFilter ? { status: statusFilter } : {};

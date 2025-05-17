@@ -77,7 +77,7 @@ export async function POST(req: Request) {
     // Extract more details if available
     const attendees = eventPayload?.attendees || [];
     const organizer = eventPayload?.organizer || {};
-    const clientAttendee = attendees.find(a => a.email !== organizer.email) || {};
+    const clientAttendee = attendees.find((a: { email: string }) => a.email !== organizer.email) || {};
     
     const clientName = clientAttendee.name;
     const clientEmail = clientAttendee.email;
