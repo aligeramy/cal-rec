@@ -48,7 +48,7 @@ export async function POST(req: Request) {
 
     if (status === 'completed' && transcription) {
       // Handle both successful and empty transcriptions
-      const transcriptText = transcription.text || transcription || '';
+      const transcriptText = typeof transcription === 'string' ? transcription : (transcription.text || '');
       const hasContent = transcriptText.trim().length > 0;
       
       updateData.transcript = transcriptText;
