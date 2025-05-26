@@ -275,7 +275,7 @@ export async function POST(req: Request) {
 
       // Send the recording to the VPS for processing
       console.log("🚀 Sending recording to transcription service");
-      const callbackUrl = `${process.env.NEXT_PUBLIC_URL || "https://cal.softx.ca"}/api/transcripts/update`;
+      const callbackUrl = `${process.env.NEXT_PUBLIC_URL || "https://cal.softx.ca"}/api/transcripts/webhook`;
       console.log("📍 Using callback URL:", callbackUrl);
       
               const response = await fetch("http://198.251.68.5:3039/api/transcription/process", {
