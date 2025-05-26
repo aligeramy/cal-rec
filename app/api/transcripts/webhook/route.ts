@@ -47,9 +47,12 @@ export async function POST(req: Request) {
     };
 
     if (status === 'completed' && transcription) {
-      // Successful transcription
-      updateData.transcript = transcription.text || transcription;
-      updateData.status = 'completed';
+      // Handle both successful and empty transcriptions
+      const transcriptText = transcription.text || transcription || '';
+      const hasContent = transcriptText.trim().length > 0;
+      
+      updateData.transcript = transcriptText;
+      updateData.status = hasContent ? 'completed' : 'failed';
       
       // Store full transcription JSON in transcriptJson field (properly serialized)
       if (typeof transcription === 'object') {
@@ -57,19 +60,24 @@ export async function POST(req: Request) {
       }
       
       // Add metadata as notes if available
-      if (transcription.duration || transcription.language) {
-        const metadata = [];
-        if (transcription.duration) metadata.push(`Duration: ${transcription.duration}s`);
-        if (transcription.language) metadata.push(`Language: ${transcription.language}`);
-        if (transcription.segments?.length) metadata.push(`Segments: ${transcription.segments.length}`);
-        if (transcription.words?.length) metadata.push(`Words: ${transcription.words.length}`);
+      const metadata = [];
+      if (transcription.duration) metadata.push(`Duration: ${transcription.duration}s`);
+      if (transcription.language) metadata.push(`Language: ${transcription.language}`);
+      if (transcription.segments?.length) metadata.push(`Segments: ${transcription.segments.length}`);
+      if (transcription.words?.length) metadata.push(`Words: ${transcription.words.length}`);
+      
+      if (!hasContent) {
+        metadata.push('No speech detected');
+        updateData.notes = metadata.join(' | ') + ' | Audio may be silent or too short';
+      } else {
         updateData.notes = metadata.join(' | ');
       }
       
-      console.log('✅ Processing successful transcription', {
-        textLength: transcription.text?.length || 0,
+      console.log(hasContent ? '✅ Processing successful transcription' : '⚠️ Processing empty transcription', {
+        textLength: transcriptText.length,
         segmentsCount: transcription.segments?.length || 0,
-        wordsCount: transcription.words?.length || 0
+        wordsCount: transcription.words?.length || 0,
+        hasContent
       });
     } else {
       // Failed transcription
