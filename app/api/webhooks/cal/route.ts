@@ -2,6 +2,58 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 
+// Cal.com API configuration
+const CAL_API_KEY = process.env.CALCOM_API;
+const CAL_API_BASE = "https://api.cal.com/v1";
+
+interface CalTranscriptResponse {
+  format: string;
+  link: string;
+}
+
+interface CalTranscriptData {
+  metadata: {
+    duration: number;
+    created: string;
+  };
+  results: {
+    channels: Array<{
+      alternatives: Array<{
+        transcript: string;
+        confidence: number;
+        words: Array<{
+          word: string;
+          start: number;
+          end: number;
+          confidence: number;
+          speaker: number;
+          punctuated_word: string;
+        }>;
+        paragraphs: {
+          transcript: string;
+          paragraphs: Array<{
+            sentences: Array<{
+              text: string;
+              start: number;
+              end: number;
+            }>;
+            speaker: number;
+            start: number;
+            end: number;
+          }>;
+        };
+      }>;
+    }>;
+    utterances: Array<{
+      start: number;
+      end: number;
+      confidence: number;
+      transcript: string;
+      speaker: number;
+    }>;
+  };
+}
+
 // Simple health check endpoint
 export async function GET() {
   console.log("⚡ Webhook health check requested");
@@ -218,12 +270,9 @@ export async function POST(req: Request) {
     }
     // Check if this is a RECORDING_READY event
     else if (triggerEvent === "RECORDING_READY") {
-      console.log("🎥 Recording ready, processing for transcription");
-      // Extract needed data - Cal.com provides the download link directly!
-      const { 
-        uid,
-        downloadLink 
-      } = eventPayload;
+      console.log("🎥 Recording ready, processing with Cal.com transcription service");
+      
+      const { uid, downloadLink } = eventPayload;
 
       if (!uid || !downloadLink) {
         console.error("❌ Missing required fields in webhook payload", { uid, downloadLink });
@@ -234,7 +283,6 @@ export async function POST(req: Request) {
       }
 
       console.log("🔗 Cal.com provided download link:", downloadLink);
-
       console.log("🔍 Cal.com notified us that a recording is ready for booking:", uid);
 
       // Update meeting transcript record with recording status
@@ -250,70 +298,24 @@ export async function POST(req: Request) {
         );
       }
 
-      // Set status to processing while we fetch the recording
+      // Set status to processing while we fetch the transcription
       await prisma.meetingTranscript.update({
         where: { id: transcript.id },
         data: { 
-          status: "processing"
+          status: "processing",
+          recordingUrl: downloadLink
         }
       });
 
       console.log("✅ Updated database record status to processing:", transcript.id);
 
-      // Use the download link provided directly by Cal.com (no API call needed!)
-      console.log("🎯 Using download link provided by Cal.com webhook");
-
-      // Update the transcript with recording URL
-      const updated = await prisma.meetingTranscript.update({
-        where: { id: transcript.id },
-        data: { 
-          recordingUrl: downloadLink
-        }
+      // Start processing Cal.com transcription asynchronously
+      processCalTranscription(transcript.id, uid).catch(error => {
+        console.error("❌ Async Cal.com transcription processing failed:", error);
       });
 
-      console.log("✅ Updated database record with recording URL:", updated.id);
-
-      // Send the recording to the VPS for processing
-      console.log("🚀 Sending recording to transcription service");
-      const callbackUrl = `${process.env.NEXT_PUBLIC_URL || "https://cal.softx.ca"}/api/transcripts/webhook`;
-      console.log("📍 Using callback URL:", callbackUrl);
-      
-              const response = await fetch("http://198.251.68.5:3039/api/transcription/process", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            downloadUrl: downloadLink,
-            bookingUid: uid,
-            title: transcript.title,
-            startTime: transcript.startTime,
-            endTime: transcript.endTime,
-            clientName: transcript.clientName,
-            clientEmail: transcript.clientEmail,
-            callbackUrl
-          })
-        });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`❌ Failed to send to transcription service: ${response.status} ${response.statusText}`, errorText);
-        
-        // Update the transcript status to failed
-        await prisma.meetingTranscript.update({
-          where: { id: transcript.id },
-          data: { status: "failed" }
-        });
-
-        return NextResponse.json(
-          { error: "Failed to process recording" },
-          { status: 500 }
-        );
-      }
-
-      console.log("✅ Successfully sent recording for transcription");
       return NextResponse.json({
-        message: "Recording processing started", 
+        message: "Recording processing started with Cal.com transcription service", 
         id: transcript.id
       });
     }
@@ -342,5 +344,141 @@ export async function POST(req: Request) {
       { error: "Internal server error" },
       { status: 500 }
     );
+  }
+}
+
+async function processCalTranscription(transcriptId: string, bookingUid: string) {
+  try {
+    console.log("🔄 Starting Cal.com transcription processing", { transcriptId, bookingUid });
+
+    // Wait a bit for the recording to be fully processed by Cal.com
+    console.log("⏳ Waiting 60 seconds for Cal.com to process the recording...");
+    await new Promise(resolve => setTimeout(resolve, 60000));
+
+    // Get booking details to find the numeric ID
+    const bookingsResponse = await fetch(`${CAL_API_BASE}/bookings?apiKey=${CAL_API_KEY}`);
+    if (!bookingsResponse.ok) {
+      throw new Error(`Failed to fetch bookings: ${bookingsResponse.status}`);
+    }
+
+    const bookingsData = await bookingsResponse.json();
+    const booking = bookingsData.bookings?.find((b: { uid: string; id: number }) => b.uid === bookingUid);
+    
+    if (!booking) {
+      throw new Error(`Booking with UID ${bookingUid} not found`);
+    }
+
+    const numericBookingId = booking.id;
+    console.log("📋 Found numeric booking ID:", numericBookingId);
+
+    // Get recordings for this booking
+    const recordingsResponse = await fetch(`${CAL_API_BASE}/bookings/${numericBookingId}/recordings?apiKey=${CAL_API_KEY}`);
+    if (!recordingsResponse.ok) {
+      throw new Error(`Failed to fetch recordings: ${recordingsResponse.status}`);
+    }
+
+    const recordings = await recordingsResponse.json();
+    console.log("🎥 Found recordings:", recordings.length);
+
+    if (!recordings || recordings.length === 0) {
+      throw new Error("No recordings found for this booking");
+    }
+
+    // Get the most recent recording
+    const recording = recordings[0];
+    const recordingId = recording.id;
+    
+    console.log("🎬 Processing recording:", recordingId);
+
+    // Check if recording is finished
+    if (recording.status !== "finished") {
+      throw new Error(`Recording not ready yet. Status: ${recording.status}`);
+    }
+
+    // Get transcripts for this recording
+    const transcriptsResponse = await fetch(`${CAL_API_BASE}/bookings/${numericBookingId}/transcripts/${recordingId}?apiKey=${CAL_API_KEY}`);
+    if (!transcriptsResponse.ok) {
+      throw new Error(`Failed to fetch transcripts: ${transcriptsResponse.status}`);
+    }
+
+    const transcripts: CalTranscriptResponse[] = await transcriptsResponse.json();
+    console.log("📝 Found transcript formats:", transcripts.map(t => t.format));
+
+    // Find JSON and TXT transcripts
+    const jsonTranscript = transcripts.find(t => t.format === 'json');
+    const txtTranscript = transcripts.find(t => t.format === 'txt');
+
+    if (!jsonTranscript && !txtTranscript) {
+      throw new Error("No JSON or TXT transcript found");
+    }
+
+    let transcriptText = '';
+    let transcriptJson = null;
+
+    // Download and process JSON transcript if available
+    if (jsonTranscript) {
+      console.log("📥 Downloading JSON transcript...");
+      const jsonResponse = await fetch(jsonTranscript.link);
+      if (jsonResponse.ok) {
+        const jsonData: CalTranscriptData = await jsonResponse.json();
+        transcriptJson = {
+          words: jsonData.results.channels[0]?.alternatives[0]?.words || [],
+          utterances: jsonData.results.utterances || [],
+          metadata: jsonData.metadata
+        };
+        transcriptText = jsonData.results.channels[0]?.alternatives[0]?.transcript || '';
+        console.log("✅ JSON transcript processed", {
+          wordsCount: transcriptJson.words.length,
+          utterancesCount: transcriptJson.utterances.length,
+          textLength: transcriptText.length
+        });
+      }
+    }
+
+    // Download TXT transcript if JSON failed or as fallback
+    if (!transcriptText && txtTranscript) {
+      console.log("📥 Downloading TXT transcript...");
+      const txtResponse = await fetch(txtTranscript.link);
+      if (txtResponse.ok) {
+        transcriptText = await txtResponse.text();
+        console.log("✅ TXT transcript processed", { textLength: transcriptText.length });
+      }
+    }
+
+    // Update the transcript record
+    const hasContent = transcriptText.trim().length > 0;
+    
+    await prisma.meetingTranscript.update({
+      where: { id: transcriptId },
+      data: {
+        transcript: transcriptText,
+        transcriptJson: transcriptJson ? JSON.stringify(transcriptJson) : undefined,
+        status: hasContent ? 'completed' : 'failed',
+        updatedAt: new Date(),
+      },
+    });
+
+    console.log("✅ Transcript processing completed", {
+      transcriptId,
+      status: hasContent ? 'completed' : 'failed',
+      textLength: transcriptText.length,
+      hasJson: !!transcriptJson
+    });
+
+  } catch (error: unknown) {
+    console.error("❌ Cal.com transcription processing failed:", error);
+    
+    // Update transcript status to failed
+    try {
+      await prisma.meetingTranscript.update({
+        where: { id: transcriptId },
+        data: {
+          status: 'failed',
+          updatedAt: new Date(),
+        },
+      });
+    } catch (updateError) {
+      console.error("❌ Failed to update transcript status:", updateError);
+    }
   }
 } 
