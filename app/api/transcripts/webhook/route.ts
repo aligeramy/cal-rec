@@ -39,7 +39,7 @@ export async function POST(req: Request) {
       updatedAt: Date;
       status: string;
       transcript?: string;
-      transcriptJson?: object;
+      transcriptJson?: string;
       notes?: string;
     } = {
       updatedAt: new Date(),
@@ -51,9 +51,9 @@ export async function POST(req: Request) {
       updateData.transcript = transcription.text || transcription;
       updateData.status = 'completed';
       
-      // Store full transcription JSON in transcriptJson field
+      // Store full transcription JSON in transcriptJson field (properly serialized)
       if (typeof transcription === 'object') {
-        updateData.transcriptJson = transcription;
+        updateData.transcriptJson = JSON.stringify(transcription);
       }
       
       // Add metadata as notes if available
