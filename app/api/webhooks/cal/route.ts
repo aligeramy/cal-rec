@@ -278,7 +278,7 @@ export async function POST(req: Request) {
       const callbackUrl = `${process.env.NEXT_PUBLIC_URL || "https://cal.softx.ca"}/api/transcripts/update`;
       console.log("📍 Using callback URL:", callbackUrl);
       
-              const response = await fetch("https://transcribe.softx.ca/process", {
+              const response = await fetch("http://198.251.68.5:3039/api/transcription/process", {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
@@ -315,6 +315,19 @@ export async function POST(req: Request) {
       return NextResponse.json({
         message: "Recording processing started", 
         id: transcript.id
+      });
+    }
+
+    // Check if this is a RECORDING_TRANSCRIPTION_GENERATED event
+    else if (triggerEvent === "RECORDING_TRANSCRIPTION_GENERATED") {
+      console.log("📝 Cal.com generated transcription, checking if we can use it");
+      // Log the payload to see what Cal.com provides
+      console.log("Transcription payload:", JSON.stringify(eventPayload, null, 2));
+      
+      // For now, just acknowledge - you can enhance this later if Cal.com provides useful transcription data
+      return NextResponse.json({
+        message: "Transcription event acknowledged",
+        success: true
       });
     }
 
