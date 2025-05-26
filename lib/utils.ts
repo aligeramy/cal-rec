@@ -14,3 +14,12 @@ export function formatDate(date: Date): string {
     minute: '2-digit'
   }).format(new Date(date))
 }
+
+/**
+ * Format a timestamp in seconds to a MM:SS format
+ */
+export function formatTime(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+}

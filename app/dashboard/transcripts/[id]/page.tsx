@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { MeetingTranscript } from "@/lib/types";
+import TranscriptViewer from "@/components/transcript-viewer";
 
 export default async function TranscriptDetailPage({ 
   params 
@@ -198,37 +199,8 @@ export default async function TranscriptDetailPage({
           </div>
         </div>
         
-        {/* Notes Section */}
-        {transcript.notes && (
-          <div className="pt-4 border-t border-gray-200">
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Notes</h3>
-            <div className="bg-gray-50 rounded-md p-4 text-sm whitespace-pre-wrap">
-              {transcript.notes}
-            </div>
-          </div>
-        )}
-
-        {/* Transcript Content */}
-        <div className="pt-4 border-t border-gray-200">
-          <h3 className="text-sm font-medium text-gray-500 mb-2">Transcript Content</h3>
-          {transcript.status === 'completed' && transcript.transcript ? (
-            <div className="bg-gray-50 rounded-md p-4 text-sm whitespace-pre-wrap">
-              {transcript.transcript}
-            </div>
-          ) : transcript.status === 'processing' ? (
-            <div className="bg-gray-50 rounded-md p-4 text-sm text-gray-500">
-              Transcript is being processed. Please check back later.
-            </div>
-          ) : transcript.status === 'failed' ? (
-            <div className="bg-gray-50 rounded-md p-4 text-sm text-red-500">
-              Transcript processing failed. Please contact support.
-            </div>
-          ) : (
-            <div className="bg-gray-50 rounded-md p-4 text-sm text-gray-500">
-              Transcript is pending processing.
-            </div>
-          )}
-        </div>
+        {/* Transcript Viewer Component */}
+        <TranscriptViewer transcript={transcript} />
       </div>
     </div>
   );

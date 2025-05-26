@@ -1,89 +1,74 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { NextResponse } from 'next/server';
+import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(req: Request) {
   try {
-    console.log("📝 Received transcript update from VPS");
-    
-    // Parse the request body
-    const body = await req.json();
-    console.log("📊 Received data:", JSON.stringify(body, null, 2));
-    
-    // Extract data
-    const { bookingUid, transcript, transcript_json } = body;
+    // Check authentication
+    const session = await auth();
+    if (!session) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    }
 
-    if (!bookingUid || (!transcript && !transcript_json)) {
-      console.error("❌ Missing required fields:", { bookingUid, hasTranscript: !!transcript, hasTranscriptJson: !!transcript_json });
+    // Parse request body
+    const { id, transcript, notes } = await req.json();
+
+    // Validate required fields
+    if (!id) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: 'Transcript ID is required' },
         { status: 400 }
       );
     }
 
-    // Find the existing meeting transcript record
+    // Check if transcript exists
     const existingTranscript = await prisma.meetingTranscript.findUnique({
-      where: { bookingUid },
+      where: { id },
     });
 
     if (!existingTranscript) {
-      console.error("❌ Meeting transcript not found for bookingUid:", bookingUid);
       return NextResponse.json(
-        { error: "Meeting transcript not found" },
+        { error: 'Transcript not found' },
         { status: 404 }
       );
     }
 
-    console.log("✅ Found existing transcript record:", existingTranscript.id);
+    // Update fields that were provided
+    const updateData: {
+      updatedAt: Date;
+      transcript?: string;
+      notes?: string;
+    } = {
+      updatedAt: new Date(),
+    };
 
-    // Update the transcript record
-    let updatedTranscript;
-    
-    if (transcript && transcript_json) {
-      // Both text and JSON provided
-      updatedTranscript = await prisma.meetingTranscript.update({
-        where: { bookingUid },
-        data: {
-          transcript,
-          transcriptJson: transcript_json,
-          status: "completed",
-          updatedAt: new Date()
-        },
-      });
-    } else if (transcript) {
-      // Only text provided
-      updatedTranscript = await prisma.meetingTranscript.update({
-        where: { bookingUid },
-        data: {
-          transcript,
-          status: "completed",
-          updatedAt: new Date()
-        },
-      });
-    } else if (transcript_json) {
-      // Only JSON provided
-      updatedTranscript = await prisma.meetingTranscript.update({
-        where: { bookingUid },
-        data: {
-          transcriptJson: transcript_json,
-          status: "completed",
-          updatedAt: new Date()
-        },
-      });
+    if (transcript !== undefined) {
+      updateData.transcript = transcript;
     }
 
-    console.log("✅ Transcript updated successfully:", updatedTranscript?.id);
+    if (notes !== undefined) {
+      updateData.notes = notes;
+    }
 
+    // Update the transcript in the database
+    const updatedTranscript = await prisma.meetingTranscript.update({
+      where: { id },
+      data: updateData,
+    });
+
+    // Return the updated transcript
+    return NextResponse.json({
+      success: true,
+      message: 'Transcript updated successfully',
+      data: updatedTranscript,
+    });
+  } catch (error) {
+    console.error('Error updating transcript:', error);
     return NextResponse.json(
       { 
-        message: "Transcript updated successfully",
-        id: updatedTranscript?.id 
+        error: 'Failed to update transcript',
+        details: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: 200 }
-    );
-  } catch (error) {
-    console.error("❌ Error updating transcript:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
       { status: 500 }
     );
   }

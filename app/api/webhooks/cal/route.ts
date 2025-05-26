@@ -276,10 +276,40 @@ export async function POST(req: Request) {
         );
       }
       
-      // Make API call to Cal.com to get recording download links
-      const recordingsResponse = await fetch(`https://api.cal.com/v1/bookings/${uid}/recordings?apiKey=${calApiKey}`, {
+      // Try to get the booking first to get the correct ID
+      console.log("🔍 First, let's get the booking details to find the correct ID");
+      let bookingId = uid; // Start with UID, might need to convert
+      
+      // Try to fetch booking details first
+      try {
+        const bookingResponse = await fetch(`https://api.cal.com/v1/bookings?apiKey=${calApiKey}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json"
+          }
+        });
+        
+        if (bookingResponse.ok) {
+          const bookingsData = await bookingResponse.json();
+          console.log("📋 Available bookings:", JSON.stringify(bookingsData, null, 2));
+          
+          // Find the booking with matching UID
+          const booking = bookingsData.bookings?.find((b: { uid: string; id: string }) => b.uid === uid);
+          if (booking) {
+            bookingId = booking.id;
+            console.log(`🔍 Found booking ID ${bookingId} for UID ${uid}`);
+          }
+        }
+      } catch (error) {
+        console.log("⚠️ Could not fetch booking details, will try with UID directly:", error);
+      }
+      
+      // Now try to get recordings using Bearer token authentication
+      console.log(`🔄 Fetching recordings for booking: ${bookingId}`);
+      const recordingsResponse = await fetch(`https://api.cal.com/v1/bookings/${bookingId}/recordings`, {
         method: "GET",
         headers: {
+          "Authorization": `Bearer ${calApiKey}`,
           "Content-Type": "application/json"
         }
       });
@@ -287,16 +317,120 @@ export async function POST(req: Request) {
       if (!recordingsResponse.ok) {
         console.error(`❌ Failed to fetch recordings from Cal.com API: ${recordingsResponse.status} ${recordingsResponse.statusText}`);
         
-        // Update status to failed
-        await prisma.meetingTranscript.update({
-          where: { id: transcript.id },
-          data: { status: "failed" }
+        // Try with query parameter method as fallback
+        console.log("🔄 Trying fallback method with query parameter...");
+        const fallbackResponse = await fetch(`https://api.cal.com/v1/bookings/${bookingId}/recordings?apiKey=${calApiKey}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json"
+          }
         });
         
-        return NextResponse.json(
-          { error: "Failed to fetch recording from Cal.com" },
-          { status: 500 }
-        );
+        if (!fallbackResponse.ok) {
+          console.error(`❌ Fallback method also failed: ${fallbackResponse.status} ${fallbackResponse.statusText}`);
+          
+          // Update status to failed
+          await prisma.meetingTranscript.update({
+            where: { id: transcript.id },
+            data: { status: "failed" }
+          });
+          
+          return NextResponse.json(
+            { error: "Failed to fetch recording from Cal.com" },
+            { status: 500 }
+          );
+        }
+        
+        // Use fallback response
+        const recordings = await fallbackResponse.json();
+        console.log("📋 Recordings data (fallback):", JSON.stringify(recordings, null, 2));
+        
+        if (!recordings || recordings.length === 0) {
+          console.error("❌ No recordings found for this booking");
+          
+          // Update status to failed
+          await prisma.meetingTranscript.update({
+            where: { id: transcript.id },
+            data: { status: "failed" }
+          });
+          
+          return NextResponse.json(
+            { error: "No recordings found for this booking" },
+            { status: 404 }
+          );
+        }
+        
+        // Get the first recording's download link
+        const downloadUrl = recordings[0].download_link;
+        
+        if (!downloadUrl) {
+          console.error("❌ No download link found in the recording data");
+          
+          // Update status to failed
+          await prisma.meetingTranscript.update({
+            where: { id: transcript.id },
+            data: { status: "failed" }
+          });
+          
+          return NextResponse.json(
+            { error: "No download link found in the recording data" },
+            { status: 500 }
+          );
+        }
+
+        // Update the transcript with recording URL
+        const updated = await prisma.meetingTranscript.update({
+          where: { id: transcript.id },
+          data: { 
+            recordingUrl: downloadUrl
+          }
+        });
+
+        console.log("✅ Updated database record with recording URL:", updated.id);
+
+        // Send the recording to the VPS for processing
+        console.log("🚀 Sending recording to transcription service");
+        const callbackUrl = `${process.env.NEXT_PUBLIC_URL || "https://cal.softx.ca"}/api/transcripts/update`;
+        console.log("📍 Using callback URL:", callbackUrl);
+        
+        const response = await fetch("https://transcribe.softx.ca/process", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            downloadUrl,
+            bookingUid: uid,
+            title: transcript.title,
+            startTime: transcript.startTime,
+            endTime: transcript.endTime,
+            clientName: transcript.clientName,
+            clientEmail: transcript.clientEmail,
+            callbackUrl
+          })
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`❌ Failed to send to transcription service: ${response.status} ${response.statusText}`, errorText);
+          
+          // Update the transcript status to failed
+          await prisma.meetingTranscript.update({
+            where: { id: transcript.id },
+            data: { status: "failed" }
+          });
+
+          return NextResponse.json(
+            { error: "Failed to process recording" },
+            { status: 500 }
+          );
+        }
+
+        console.log("✅ Successfully sent recording for transcription");
+        return NextResponse.json({
+          message: "Recording processing started", 
+          id: transcript.id
+        });
       }
       
       const recordings = await recordingsResponse.json();

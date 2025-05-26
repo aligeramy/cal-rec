@@ -9,6 +9,17 @@ export type User = {
   updatedAt: Date;
 };
 
+export type Word = {
+  word: string;
+  start: number;
+  end: number;
+  confidence: number;
+};
+
+export type TranscriptJson = {
+  words: Word[];
+};
+
 export type MeetingTranscript = {
   id: string;
   bookingUid: string;
@@ -16,6 +27,7 @@ export type MeetingTranscript = {
   startTime: Date | null;
   endTime: Date | null;
   transcript: string | null;
+  transcriptJson: TranscriptJson | null;
   createdAt: Date;
   updatedAt: Date;
   status: string;

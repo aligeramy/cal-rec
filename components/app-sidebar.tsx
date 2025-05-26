@@ -6,6 +6,7 @@ import {
   ServerCog,
   UserCog,
 } from "lucide-react"
+import Link from "next/link"
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
@@ -120,12 +121,12 @@ export function AppSidebar({ currentUser, ...props }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <div className={`py-2 ${collapsed ? 'px-0 flex justify-center items-center' : 'px-4 flex items-center'}`}>
+        <Link href="/dashboard" className={`py-2 ${collapsed ? 'px-0 flex justify-center items-center' : 'px-4 flex items-center'}`}>
           <AudioWaveform className={`text-primary ${collapsed ? '' : 'mr-2'}`} />
           {!collapsed && (
             <span className="font-bold text-lg whitespace-nowrap">TranscriptAI</span>
           )}
-        </div>
+        </Link>
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navMainData} />

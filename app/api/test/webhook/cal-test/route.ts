@@ -12,32 +12,32 @@ export async function GET() {
       ? `${process.env.NEXT_PUBLIC_URL}/api/webhooks/cal` 
       : "https://cal.softx.ca/api/webhooks/cal";
     
-    // Create a sample booking created event
-    const bookingCreatedPayload = {
-      triggerEvent: "BOOKING_CREATED",
-      bookingUid: `test-${Date.now()}`,
-      title: "Test Booking",
-      startTime: new Date().toISOString(),
-      endTime: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now
+    // Create a sample RECORDING_READY event
+    const recordingReadyPayload = {
+      triggerEvent: "RECORDING_READY",
       payload: {
+        uid: `test-recording-${Date.now()}`,
+        title: "Test Recording Ready",
+        startTime: new Date().toISOString(),
+        endTime: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now
+        organizer: { email: "host@example.com", name: "Test Host" },
         attendees: [
           { email: "client@example.com", name: "Test Client" }
         ],
-        organizer: { email: "host@example.com", name: "Test Host" },
         location: "Zoom",
-        description: "This is a test booking",
+        description: "This is a test recording ready event",
         eventType: { title: "Test Meeting" }
       }
     };
     
-    const payloadString = JSON.stringify(bookingCreatedPayload);
+    const payloadString = JSON.stringify(recordingReadyPayload);
     
     // Generate the signature using the explicitly provided webhook secret
     const hmac = crypto.createHmac("sha256", webhookSecret);
     hmac.update(payloadString);
     const signature = hmac.digest("hex");
     
-    console.log("🧪 Testing webhook with provided webhook secret");
+    console.log("🧪 Testing RECORDING_READY webhook with provided webhook secret");
     console.log("🔐 Generated signature:", signature);
     
     // Make the actual HTTP request to our webhook
@@ -60,7 +60,7 @@ export async function GET() {
     }
     
     return NextResponse.json({
-      message: "Direct webhook test completed",
+      message: "RECORDING_READY webhook test completed",
       status: response.status,
       success: response.ok,
       response: responseData,
@@ -70,11 +70,11 @@ export async function GET() {
           "Content-Type": "application/json",
           "x-cal-signature-256": signature
         },
-        body: bookingCreatedPayload
+        body: recordingReadyPayload
       }
     });
   } catch (error) {
-    console.error("❌ Error testing webhook:", error);
+    console.error("❌ Error testing RECORDING_READY webhook:", error);
     return NextResponse.json(
       { error: "Internal server error", message: (error as Error).message },
       { status: 500 }
