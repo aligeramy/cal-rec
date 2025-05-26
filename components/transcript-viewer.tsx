@@ -355,7 +355,8 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
           },
           subject: `Meeting Transcript: ${transcript.title || 'Untitled Meeting'}`,
           includeNotes: true,
-          includeTranscript: true
+          includeTranscript: true,
+          sendAsPDF: true
         }),
       })
       
@@ -472,7 +473,7 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
                   ) : (
                     <>
                       <Mail className="h-4 w-4 mr-1" />
-                      <span>Send to Client</span>
+                      <span>Send PDF to Client</span>
                     </>
                   )}
                 </button>
@@ -506,7 +507,7 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
                   ) : (
                     <>
                       <Send className="h-4 w-4 mr-1" />
-                      <span>Send to Admin</span>
+                      <span>Send PDF to Admin</span>
                     </>
                   )}
                 </button>
