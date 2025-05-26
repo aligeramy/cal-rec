@@ -39,6 +39,7 @@ export async function POST(req: Request) {
       updatedAt: Date;
       status: string;
       transcript?: string;
+      transcriptJson?: object;
       notes?: string;
     } = {
       updatedAt: new Date(),
@@ -50,16 +51,26 @@ export async function POST(req: Request) {
       updateData.transcript = transcription.text || transcription;
       updateData.status = 'completed';
       
+      // Store full transcription JSON in transcriptJson field
+      if (typeof transcription === 'object') {
+        updateData.transcriptJson = transcription;
+      }
+      
       // Add metadata as notes if available
       if (transcription.duration || transcription.language) {
         const metadata = [];
         if (transcription.duration) metadata.push(`Duration: ${transcription.duration}s`);
         if (transcription.language) metadata.push(`Language: ${transcription.language}`);
         if (transcription.segments?.length) metadata.push(`Segments: ${transcription.segments.length}`);
+        if (transcription.words?.length) metadata.push(`Words: ${transcription.words.length}`);
         updateData.notes = metadata.join(' | ');
       }
       
-      console.log('✅ Processing successful transcription');
+      console.log('✅ Processing successful transcription', {
+        textLength: transcription.text?.length || 0,
+        segmentsCount: transcription.segments?.length || 0,
+        wordsCount: transcription.words?.length || 0
+      });
     } else {
       // Failed transcription
       updateData.status = 'failed';
