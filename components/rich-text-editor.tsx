@@ -63,7 +63,7 @@ export function RichTextEditor({
     content,
     editable: !readOnly,
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML())
+      onChange(editor.getText())
     },
     editorProps: {
       attributes: {
@@ -79,7 +79,7 @@ export function RichTextEditor({
 
   // Update editor content when prop changes externally
   useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
+    if (editor && content !== editor.getText()) {
       editor.commands.setContent(content)
     }
   }, [editor, content])

@@ -14,10 +14,25 @@ export type Word = {
   start: number;
   end: number;
   confidence: number;
+  speaker?: number;
+  punctuated_word?: string;
+};
+
+export type Utterance = {
+  start: number;
+  end: number;
+  confidence: number;
+  transcript: string;
+  speaker: number;
 };
 
 export type TranscriptJson = {
   words: Word[];
+  utterances?: Utterance[];
+  metadata?: {
+    duration: number;
+    created: string;
+  };
 };
 
 export type MeetingTranscript = {

@@ -12,7 +12,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { cn } from '@/lib/utils'
-import { RichTextEditor } from './rich-text-editor'
 
 interface TranscriptViewerProps {
   transcript: MeetingTranscript
@@ -23,7 +22,7 @@ interface TranscriptViewerProps {
 export default function TranscriptViewer({ transcript: initialTranscript }: TranscriptViewerProps) {
   // State for the transcript data that can be edited
   const [transcript, setTranscript] = useState(initialTranscript)
-  const [displayMode, setDisplayMode] = useState<'time' | 'full'>('full')
+  const [displayMode, setDisplayMode] = useState<'time' | 'full' | 'speakers'>('full')
   const [sendingToClient, setSendingToClient] = useState(false)
   const [sendingToAdmin, setSendingToAdmin] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -55,6 +54,27 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
   const renderTranscript = () => {
     if (displayMode === 'full' || !transcriptJson) {
       return <div className="whitespace-pre-wrap">{transcriptText}</div>;
+    }
+    
+    if (displayMode === 'speakers' && transcriptJson.utterances) {
+      // Speaker mode with utterances
+      return (
+        <div className="space-y-4">
+          {transcriptJson.utterances.map((utterance, index) => (
+            <div key={index} className="flex">
+              <div className="w-20 flex-shrink-0 text-muted-foreground text-xs pt-1 font-medium">
+                Speaker {utterance.speaker}
+              </div>
+              <div className="w-16 flex-shrink-0 text-muted-foreground text-xs pt-1">
+                {formatTime(utterance.start)}
+              </div>
+              <div className="flex-1">
+                {utterance.transcript}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
     }
     
     // Time mode with timestamps
@@ -265,6 +285,13 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
             Full View
           </button>
           <button
+            onClick={() => setDisplayMode('speakers')}
+            className={viewModeButtonClass(displayMode === 'speakers')}
+            disabled={!transcriptJson?.utterances}
+          >
+            Speakers
+          </button>
+          <button
             onClick={() => setDisplayMode('time')}
             className={viewModeButtonClass(displayMode === 'time')}
             disabled={!transcriptJson}
@@ -356,10 +383,11 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
         )}
         
         {isEditingTranscript ? (
-          <RichTextEditor 
-            content={editedTranscript} 
-            onChange={setEditedTranscript} 
-            className="bg-muted"
+          <textarea
+            value={editedTranscript}
+            onChange={(e) => setEditedTranscript(e.target.value)}
+            className="w-full min-h-[200px] p-4 bg-muted rounded-md border border-border resize-y focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="Enter transcript text..."
           />
         ) : transcript.status === 'completed' ? (
           <div className="bg-muted rounded-md p-4 text-sm">
@@ -391,10 +419,11 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
           )}
           
           {isEditingNotes ? (
-            <RichTextEditor 
-              content={editedNotes} 
-              onChange={setEditedNotes} 
-              className="bg-muted"
+            <textarea
+              value={editedNotes}
+              onChange={(e) => setEditedNotes(e.target.value)}
+              className="w-full min-h-[150px] p-4 bg-muted rounded-md border border-border resize-y focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="Enter meeting notes..."
             />
           ) : (
             <div className="bg-muted rounded-md p-4 text-sm whitespace-pre-wrap">
