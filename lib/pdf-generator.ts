@@ -1,6 +1,22 @@
 import puppeteer from 'puppeteer';
+import puppeteerCore from 'puppeteer-core';
 import { MeetingTranscript } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
+
+// Import chromium for serverless environments
+let chromium: {
+  args: string[];
+  defaultViewport: { width: number; height: number };
+  executablePath: () => Promise<string>;
+  headless: boolean;
+} | null = null;
+
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  chromium = require('@sparticuz/chromium');
+} catch {
+  console.log('Chromium package not found, using regular puppeteer');
+}
 
 export interface PDFGenerationOptions {
   includeNotes?: boolean;
@@ -31,13 +47,41 @@ export async function generateTranscriptPDF(
     recipientType
   });
 
-  // Launch Puppeteer and generate PDF
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
+  let browser;
 
   try {
+    // Check if we're in a serverless environment
+    const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.NODE_ENV === 'production';
+    
+    if (isServerless && chromium) {
+      // Use chromium for serverless environments
+      browser = await puppeteerCore.launch({
+        args: [
+          ...chromium.args,
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu',
+          '--single-process',
+          '--no-zygote'
+        ],
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
+      });
+    } else {
+      // Use regular puppeteer for local development
+      browser = await puppeteer.launch({
+        headless: true,
+        args: [
+          '--no-sandbox', 
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-gpu'
+        ]
+      });
+    }
+
     const page = await browser.newPage();
     
     // Set content and wait for any dynamic content to load
@@ -67,8 +111,13 @@ export async function generateTranscriptPDF(
     });
 
     return Buffer.from(pdfBuffer);
+  } catch (error) {
+    console.error('PDF generation error:', error);
+    throw new Error(`PDF generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   } finally {
-    await browser.close();
+    if (browser) {
+      await browser.close();
+    }
   }
 }
 

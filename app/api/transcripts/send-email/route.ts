@@ -14,6 +14,15 @@ const EMAIL_DOMAIN = 'mail.softx.ca'
 
 export async function POST(req: Request) {
   try {
+    // Check for required environment variables
+    if (!process.env.RESEND_API_KEY) {
+      console.error('RESEND_API_KEY environment variable is not set');
+      return NextResponse.json(
+        { error: 'Email service configuration error' },
+        { status: 500 }
+      )
+    }
+
     // Verify authentication
     const session = await auth()
     if (!session) {
@@ -69,28 +78,46 @@ export async function POST(req: Request) {
     }> = [];
 
     if (sendAsPDF) {
-      // Generate PDF attachment
-      const pdfBuffer = await generateTranscriptPDF(transcript, {
-        includeNotes,
-        includeTranscript,
-        includeMetadata: true,
-        recipientName: recipient.name || recipient.email.split('@')[0],
-        recipientType: recipient.email === transcript.clientEmail ? 'client' : 'admin'
-      });
+      try {
+        // Generate PDF attachment
+        const pdfBuffer = await generateTranscriptPDF(transcript, {
+          includeNotes,
+          includeTranscript,
+          includeMetadata: true,
+          recipientName: recipient.name || recipient.email.split('@')[0],
+          recipientType: recipient.email === transcript.clientEmail ? 'client' : 'admin'
+        });
 
-      // Create a simpler email HTML for PDF attachment
-      emailHtml = generateEmailHtmlForPDF({
-        transcript,
-        recipientName: recipient.name || recipient.email.split('@')[0],
-      });
+        // Create a simpler email HTML for PDF attachment
+        emailHtml = generateEmailHtmlForPDF({
+          transcript,
+          recipientName: recipient.name || recipient.email.split('@')[0],
+        });
 
-      // Add PDF attachment
-      attachments.push({
-        filename: `transcript-${transcript.bookingUid}-${new Date().toISOString().split('T')[0]}.pdf`,
-        content: pdfBuffer,
-        type: 'application/pdf',
-        disposition: 'attachment'
-      });
+        // Add PDF attachment
+        attachments.push({
+          filename: `transcript-${transcript.bookingUid}-${new Date().toISOString().split('T')[0]}.pdf`,
+          content: pdfBuffer,
+          type: 'application/pdf',
+          disposition: 'attachment'
+        });
+      } catch (pdfError) {
+        console.warn('PDF generation failed, falling back to HTML email:', pdfError);
+        
+        // Fallback to HTML email if PDF generation fails
+        emailHtml = generateEmailHtml({
+          transcript,
+          recipientName: recipient.name || recipient.email.split('@')[0],
+          includeNotes,
+          includeTranscript
+        });
+        
+        // Add a note about PDF generation failure
+        emailHtml = emailHtml.replace(
+          '<p>Dear',
+          '<div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 10px; margin-bottom: 20px; border-radius: 4px;"><strong>Note:</strong> PDF generation is temporarily unavailable. Please find the transcript content below.</div><p>Dear'
+        );
+      }
     } else {
       // Generate full HTML email content
       emailHtml = generateEmailHtml({
@@ -112,8 +139,19 @@ export async function POST(req: Request) {
 
     if (error) {
       console.error('Error sending email via Resend:', error)
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to send email';
+      if (typeof error === 'object' && error !== null) {
+        if ('message' in error && typeof error.message === 'string') {
+          errorMessage = `Email service error: ${error.message}`;
+        } else if ('name' in error && typeof error.name === 'string') {
+          errorMessage = `Email service error: ${error.name}`;
+        }
+      }
+      
       return NextResponse.json(
-        { error: 'Failed to send email', details: error },
+        { error: errorMessage, details: error },
         { status: 500 }
       )
     }
@@ -127,7 +165,7 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error('Error in transcript email API:', error)
     return NextResponse.json(
-      { error: 'Internal Server Error', details: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to send email', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

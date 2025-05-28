@@ -66,6 +66,161 @@ export async function GET() {
   });
 }
 
+// Move processCalTranscription here
+async function processCalTranscription(transcriptId: string, bookingUid: string) {
+  try {
+    console.log("🔄 Starting Cal.com transcription processing", { transcriptId, bookingUid });
+
+    // Wait a bit for the recording to be fully processed by Cal.com
+    console.log("⏳ Waiting 30 seconds for Cal.com to process the recording...");
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Get booking details to find the numeric ID
+    const bookingsResponse = await fetch(`${CAL_API_BASE}/bookings?apiKey=${CAL_API_KEY}`);
+    if (!bookingsResponse.ok) {
+      throw new Error(`Failed to fetch bookings: ${bookingsResponse.status}`);
+    }
+
+    const bookingsData = await bookingsResponse.json();
+    const booking = bookingsData.bookings?.find((b: { uid: string; id: number }) => b.uid === bookingUid);
+    
+    if (!booking) {
+      throw new Error(`Booking with UID ${bookingUid} not found`);
+    }
+
+    const numericBookingId = booking.id;
+    console.log("📋 Found numeric booking ID:", numericBookingId);
+
+    // Get recordings for this booking
+    const recordingsResponse = await fetch(`${CAL_API_BASE}/bookings/${numericBookingId}/recordings?apiKey=${CAL_API_KEY}`);
+    if (!recordingsResponse.ok) {
+      throw new Error(`Failed to fetch recordings: ${recordingsResponse.status}`);
+    }
+
+    const recordings = await recordingsResponse.json();
+    console.log("🎥 Found recordings:", recordings.length);
+
+    if (!recordings || recordings.length === 0) {
+      throw new Error("No recordings found for this booking");
+    }
+
+    // Get the most recent recording
+    const recording = recordings[0];
+    const recordingId = recording.id;
+    
+    console.log("🎬 Processing recording:", recordingId);
+
+    // Check if recording is finished
+    if (recording.status !== "finished") {
+      throw new Error(`Recording not ready yet. Status: ${recording.status}`);
+    }
+
+    // Get transcripts for this recording with retry logic
+    let transcripts: CalTranscriptResponse[] = [];
+    let transcriptAttempts = 0;
+    const maxTranscriptAttempts = 3;
+    
+    while (transcriptAttempts < maxTranscriptAttempts) {
+      transcriptAttempts++;
+      console.log(`📝 Attempting to fetch transcripts (attempt ${transcriptAttempts}/${maxTranscriptAttempts})...`);
+      
+      const transcriptsResponse = await fetch(`${CAL_API_BASE}/bookings/${numericBookingId}/transcripts/${recordingId}?apiKey=${CAL_API_KEY}`);
+      
+      if (transcriptsResponse.ok) {
+        transcripts = await transcriptsResponse.json();
+        console.log("📝 Found transcript formats:", transcripts.map(t => t.format));
+        break;
+      } else if (transcriptsResponse.status === 404 && transcriptAttempts < maxTranscriptAttempts) {
+        console.log(`⏳ Transcripts not ready yet, waiting 30 seconds before retry...`);
+        await new Promise(resolve => setTimeout(resolve, 30000));
+      } else {
+        throw new Error(`Failed to fetch transcripts: ${transcriptsResponse.status}`);
+      }
+    }
+    
+    if (transcripts.length === 0) {
+      throw new Error("No transcripts found after all retry attempts");
+    }
+
+    // Find JSON and TXT transcripts
+    const jsonTranscript = transcripts.find(t => t.format === 'json');
+    const txtTranscript = transcripts.find(t => t.format === 'txt');
+
+    if (!jsonTranscript && !txtTranscript) {
+      throw new Error("No JSON or TXT transcript found");
+    }
+
+    let transcriptText = '';
+    let transcriptJson = null;
+
+    // Download and process JSON transcript if available
+    if (jsonTranscript) {
+      console.log("📥 Downloading JSON transcript...");
+      const jsonResponse = await fetch(jsonTranscript.link);
+      if (jsonResponse.ok) {
+        const jsonData: CalTranscriptData = await jsonResponse.json();
+        transcriptJson = {
+          words: jsonData.results.channels[0]?.alternatives[0]?.words || [],
+          utterances: jsonData.results.utterances || [],
+          metadata: jsonData.metadata
+        };
+        transcriptText = jsonData.results.channels[0]?.alternatives[0]?.transcript || '';
+        console.log("✅ JSON transcript processed", {
+          wordsCount: transcriptJson.words.length,
+          utterancesCount: transcriptJson.utterances.length,
+          textLength: transcriptText.length
+        });
+      }
+    }
+
+    // Download TXT transcript if JSON failed or as fallback
+    if (!transcriptText && txtTranscript) {
+      console.log("📥 Downloading TXT transcript...");
+      const txtResponse = await fetch(txtTranscript.link);
+      if (txtResponse.ok) {
+        transcriptText = await txtResponse.text();
+        console.log("✅ TXT transcript processed", { textLength: transcriptText.length });
+      }
+    }
+
+    // Update the transcript record
+    const hasContent = transcriptText.trim().length > 0;
+    
+    await prisma.meetingTranscript.update({
+      where: { id: transcriptId },
+      data: {
+        transcript: transcriptText,
+        transcriptJson: transcriptJson ? JSON.stringify(transcriptJson) : undefined,
+        status: hasContent ? 'completed' : 'failed',
+        updatedAt: new Date(),
+      },
+    });
+
+    console.log("✅ Transcript processing completed", {
+      transcriptId,
+      status: hasContent ? 'completed' : 'failed',
+      textLength: transcriptText.length,
+      hasJson: !!transcriptJson
+    });
+
+  } catch (error: unknown) {
+    console.error("❌ Cal.com transcription processing failed:", error);
+    
+    // Update transcript status to failed
+    try {
+      await prisma.meetingTranscript.update({
+        where: { id: transcriptId },
+        data: {
+          status: 'failed',
+          updatedAt: new Date(),
+        },
+      });
+    } catch (updateError) {
+      console.error("❌ Failed to update transcript status:", updateError);
+    }
+  }
+}
+
 export async function POST(req: Request) {
   console.log("🔔 Cal.com webhook received");
   
@@ -310,7 +465,7 @@ export async function POST(req: Request) {
       console.log("✅ Updated database record status to processing:", transcript.id);
 
       // Start processing Cal.com transcription asynchronously
-      processCalTranscription(transcript.id, uid).catch(error => {
+      processCalTranscription(transcript.id, uid).catch((error: unknown) => {
         console.error("❌ Async Cal.com transcription processing failed:", error);
       });
 
@@ -381,10 +536,14 @@ export async function POST(req: Request) {
 
 // Process transcription without delay for RECORDING_TRANSCRIPTION_GENERATED events
 async function processCalTranscriptionNoDelay(transcriptId: string, bookingUid: string) {
-  try {
-    console.log("🔄 Starting immediate Cal.com transcription processing", { transcriptId, bookingUid });
+  let retryCount = 0;
+  const maxRetries = 3;
+  
+  while (retryCount < maxRetries) {
+    try {
+      console.log("🔄 Starting immediate Cal.com transcription processing", { transcriptId, bookingUid, attempt: retryCount + 1 });
 
-    // No delay - Cal.com already told us transcription is ready
+      // No delay - Cal.com already told us transcription is ready
     
     // Get booking details to find the numeric ID
     const bookingsResponse = await fetch(`${CAL_API_BASE}/bookings?apiKey=${CAL_API_KEY}`);
@@ -491,6 +650,7 @@ async function processCalTranscriptionNoDelay(transcriptId: string, bookingUid: 
       hasJson: !!transcriptJson
     });
 
+    return;
   } catch (error: unknown) {
     console.error("❌ Immediate Cal.com transcription processing failed:", error);
     
@@ -506,159 +666,12 @@ async function processCalTranscriptionNoDelay(transcriptId: string, bookingUid: 
     } catch (updateError) {
       console.error("❌ Failed to update transcript status:", updateError);
     }
+    
+    retryCount++;
+    if (retryCount < maxRetries) {
+      console.log(`⏳ Retrying in 30 seconds... (attempt ${retryCount + 1}/${maxRetries})`);
+      await new Promise(resolve => setTimeout(resolve, 30000));
+    }
   }
 }
-
-async function processCalTranscription(transcriptId: string, bookingUid: string) {
-  try {
-    console.log("🔄 Starting Cal.com transcription processing", { transcriptId, bookingUid });
-
-    // Wait a bit for the recording to be fully processed by Cal.com
-    console.log("⏳ Waiting 30 seconds for Cal.com to process the recording...");
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Get booking details to find the numeric ID
-    const bookingsResponse = await fetch(`${CAL_API_BASE}/bookings?apiKey=${CAL_API_KEY}`);
-    if (!bookingsResponse.ok) {
-      throw new Error(`Failed to fetch bookings: ${bookingsResponse.status}`);
-    }
-
-    const bookingsData = await bookingsResponse.json();
-    const booking = bookingsData.bookings?.find((b: { uid: string; id: number }) => b.uid === bookingUid);
-    
-    if (!booking) {
-      throw new Error(`Booking with UID ${bookingUid} not found`);
-    }
-
-    const numericBookingId = booking.id;
-    console.log("📋 Found numeric booking ID:", numericBookingId);
-
-    // Get recordings for this booking
-    const recordingsResponse = await fetch(`${CAL_API_BASE}/bookings/${numericBookingId}/recordings?apiKey=${CAL_API_KEY}`);
-    if (!recordingsResponse.ok) {
-      throw new Error(`Failed to fetch recordings: ${recordingsResponse.status}`);
-    }
-
-    const recordings = await recordingsResponse.json();
-    console.log("🎥 Found recordings:", recordings.length);
-
-    if (!recordings || recordings.length === 0) {
-      throw new Error("No recordings found for this booking");
-    }
-
-    // Get the most recent recording
-    const recording = recordings[0];
-    const recordingId = recording.id;
-    
-    console.log("🎬 Processing recording:", recordingId);
-
-    // Check if recording is finished
-    if (recording.status !== "finished") {
-      throw new Error(`Recording not ready yet. Status: ${recording.status}`);
-    }
-
-    // Get transcripts for this recording with retry logic
-    let transcripts: CalTranscriptResponse[] = [];
-    let transcriptAttempts = 0;
-    const maxTranscriptAttempts = 3;
-    
-    while (transcriptAttempts < maxTranscriptAttempts) {
-      transcriptAttempts++;
-      console.log(`📝 Attempting to fetch transcripts (attempt ${transcriptAttempts}/${maxTranscriptAttempts})...`);
-      
-      const transcriptsResponse = await fetch(`${CAL_API_BASE}/bookings/${numericBookingId}/transcripts/${recordingId}?apiKey=${CAL_API_KEY}`);
-      
-      if (transcriptsResponse.ok) {
-        transcripts = await transcriptsResponse.json();
-        console.log("📝 Found transcript formats:", transcripts.map(t => t.format));
-        break;
-      } else if (transcriptsResponse.status === 404 && transcriptAttempts < maxTranscriptAttempts) {
-        console.log(`⏳ Transcripts not ready yet, waiting 30 seconds before retry...`);
-        await new Promise(resolve => setTimeout(resolve, 30000));
-      } else {
-        throw new Error(`Failed to fetch transcripts: ${transcriptsResponse.status}`);
-      }
-    }
-    
-    if (transcripts.length === 0) {
-      throw new Error("No transcripts found after all retry attempts");
-    }
-
-    // Find JSON and TXT transcripts
-    const jsonTranscript = transcripts.find(t => t.format === 'json');
-    const txtTranscript = transcripts.find(t => t.format === 'txt');
-
-    if (!jsonTranscript && !txtTranscript) {
-      throw new Error("No JSON or TXT transcript found");
-    }
-
-    let transcriptText = '';
-    let transcriptJson = null;
-
-    // Download and process JSON transcript if available
-    if (jsonTranscript) {
-      console.log("📥 Downloading JSON transcript...");
-      const jsonResponse = await fetch(jsonTranscript.link);
-      if (jsonResponse.ok) {
-        const jsonData: CalTranscriptData = await jsonResponse.json();
-        transcriptJson = {
-          words: jsonData.results.channels[0]?.alternatives[0]?.words || [],
-          utterances: jsonData.results.utterances || [],
-          metadata: jsonData.metadata
-        };
-        transcriptText = jsonData.results.channels[0]?.alternatives[0]?.transcript || '';
-        console.log("✅ JSON transcript processed", {
-          wordsCount: transcriptJson.words.length,
-          utterancesCount: transcriptJson.utterances.length,
-          textLength: transcriptText.length
-        });
-      }
-    }
-
-    // Download TXT transcript if JSON failed or as fallback
-    if (!transcriptText && txtTranscript) {
-      console.log("📥 Downloading TXT transcript...");
-      const txtResponse = await fetch(txtTranscript.link);
-      if (txtResponse.ok) {
-        transcriptText = await txtResponse.text();
-        console.log("✅ TXT transcript processed", { textLength: transcriptText.length });
-      }
-    }
-
-    // Update the transcript record
-    const hasContent = transcriptText.trim().length > 0;
-    
-    await prisma.meetingTranscript.update({
-      where: { id: transcriptId },
-      data: {
-        transcript: transcriptText,
-        transcriptJson: transcriptJson ? JSON.stringify(transcriptJson) : undefined,
-        status: hasContent ? 'completed' : 'failed',
-        updatedAt: new Date(),
-      },
-    });
-
-    console.log("✅ Transcript processing completed", {
-      transcriptId,
-      status: hasContent ? 'completed' : 'failed',
-      textLength: transcriptText.length,
-      hasJson: !!transcriptJson
-    });
-
-  } catch (error: unknown) {
-    console.error("❌ Cal.com transcription processing failed:", error);
-    
-    // Update transcript status to failed
-    try {
-      await prisma.meetingTranscript.update({
-        where: { id: transcriptId },
-        data: {
-          status: 'failed',
-          updatedAt: new Date(),
-        },
-      });
-    } catch (updateError) {
-      console.error("❌ Failed to update transcript status:", updateError);
-    }
-  }
 } 
