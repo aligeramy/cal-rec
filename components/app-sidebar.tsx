@@ -29,7 +29,7 @@ const navMainData = [
     isActive: true,
     items: [
       {
-        title: "Transcripts",
+        title: "All Transcripts",
         url: "/dashboard/transcripts",
         items: [
           {
@@ -50,10 +50,6 @@ const navMainData = [
         title: "Search",
         url: "#",
       },
-      {
-        title: "Bookings",
-        url: "#",
-      }
     ],
   },
   {
@@ -124,7 +120,7 @@ export function AppSidebar({ currentUser, ...props }: AppSidebarProps) {
         <Link href="/dashboard" className={`py-2 ${collapsed ? 'px-0 flex justify-center items-center' : 'px-4 flex items-center'}`}>
           <AudioWaveform className={`text-primary ${collapsed ? '' : 'mr-2'}`} />
           {!collapsed && (
-            <span className="font-bold text-lg whitespace-nowrap">TranscriptAI</span>
+            <span className="font-bold text-lg whitespace-nowrap">Cal Transcript</span>
           )}
         </Link>
       </SidebarHeader>

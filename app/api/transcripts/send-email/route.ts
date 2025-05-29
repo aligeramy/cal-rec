@@ -83,6 +83,7 @@ export async function POST(req: Request) {
         const pdfBuffer = await generateTranscriptPDF(transcript, {
           includeNotes,
           includeTranscript,
+          includeChatView: true,
           includeMetadata: true,
           recipientName: recipient.name || recipient.email.split('@')[0],
           recipientType: recipient.email === transcript.clientEmail ? 'client' : 'admin'

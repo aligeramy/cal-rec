@@ -121,7 +121,7 @@ export default async function TranscriptDetailPage({
                   <dd className="text-sm text-gray-900">
                     {transcript.location.startsWith('http') ? (
                       <a href={transcript.location} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                        {transcript.location}
+                        View Meeting
                       </a>
                     ) : (
                       transcript.location
