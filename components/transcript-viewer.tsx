@@ -292,55 +292,6 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
           </button>
         )}
         
-        {/* Email buttons */}
-        {clientEmail && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => sendEmail('client')}
-                  disabled={sendingToClient}
-                  className="inline-flex items-center text-xs px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                >
-                  {sendingToClient ? (
-                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                  ) : (
-                    <Mail className="h-3 w-3 mr-1" />
-                  )}
-                  Send PDF to Client
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Send transcript PDF to {clientName || clientEmail}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-        
-        {adminEmail && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => sendEmail('admin')}
-                  disabled={sendingToAdmin}
-                  className="inline-flex items-center text-xs px-3 py-1.5 rounded-md bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
-                >
-                  {sendingToAdmin ? (
-                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                  ) : (
-                    <Send className="h-3 w-3 mr-1" />
-                  )}
-                  Send PDF to Admin
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Send transcript PDF to {adminName || adminEmail}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-        
         {/* Edit button */}
         {!isEditing ? (
           <button
@@ -394,6 +345,57 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
           >
             Speaker View
           </button>
+        </div>
+        
+        {/* Send PDF Buttons */}
+        <div className="flex space-x-2">
+          {clientEmail && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => sendEmail('client')}
+                    disabled={sendingToClient}
+                    className="inline-flex items-center text-sm px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                  >
+                    {sendingToClient ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Mail className="h-4 w-4 mr-2" />
+                    )}
+                    Send PDF to Client
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Send transcript PDF to {clientName || clientEmail}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          
+          {adminEmail && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => sendEmail('admin')}
+                    disabled={sendingToAdmin}
+                    className="inline-flex items-center text-sm px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+                  >
+                    {sendingToAdmin ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Send className="h-4 w-4 mr-2" />
+                    )}
+                    Send PDF to Admin
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Send transcript PDF to {adminName || adminEmail}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
         </div>
       </div>
       

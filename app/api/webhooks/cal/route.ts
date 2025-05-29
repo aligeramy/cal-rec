@@ -124,17 +124,32 @@ async function processCalTranscription(transcriptId: string, bookingUid: string)
       transcriptAttempts++;
       console.log(`📝 Attempting to fetch transcripts (attempt ${transcriptAttempts}/${maxTranscriptAttempts})...`);
       
-      const transcriptsResponse = await fetch(`${CAL_API_BASE}/bookings/${numericBookingId}/transcripts/${recordingId}?apiKey=${CAL_API_KEY}`);
+      const transcriptsController = new AbortController();
+      const transcriptsTimeout = setTimeout(() => transcriptsController.abort(), 90000); // 90 second timeout for longer videos
       
-      if (transcriptsResponse.ok) {
-        transcripts = await transcriptsResponse.json();
-        console.log("📝 Found transcript formats:", transcripts.map(t => t.format));
-        break;
-      } else if (transcriptsResponse.status === 404 && transcriptAttempts < maxTranscriptAttempts) {
-        console.log(`⏳ Transcripts not ready yet, waiting 30 seconds before retry...`);
+      try {
+        const transcriptsResponse = await fetch(`${CAL_API_BASE}/bookings/${numericBookingId}/transcripts/${recordingId}?apiKey=${CAL_API_KEY}`, {
+          signal: transcriptsController.signal
+        });
+        clearTimeout(transcriptsTimeout);
+        
+        if (transcriptsResponse.ok) {
+          transcripts = await transcriptsResponse.json();
+          console.log("📝 Found transcript formats:", transcripts.map(t => t.format));
+          break;
+        } else if (transcriptsResponse.status === 404 && transcriptAttempts < maxTranscriptAttempts) {
+          console.log(`⏳ Transcripts not ready yet, waiting 30 seconds before retry...`);
+          await new Promise(resolve => setTimeout(resolve, 30000));
+        } else {
+          throw new Error(`Failed to fetch transcripts: ${transcriptsResponse.status}`);
+        }
+      } catch (error) {
+        clearTimeout(transcriptsTimeout);
+        if (transcriptAttempts >= maxTranscriptAttempts) {
+          throw error;
+        }
+        console.log(`⏳ Transcript fetch failed, waiting 30 seconds before retry...`);
         await new Promise(resolve => setTimeout(resolve, 30000));
-      } else {
-        throw new Error(`Failed to fetch transcripts: ${transcriptsResponse.status}`);
       }
     }
     
@@ -156,30 +171,54 @@ async function processCalTranscription(transcriptId: string, bookingUid: string)
     // Download and process JSON transcript if available
     if (jsonTranscript) {
       console.log("📥 Downloading JSON transcript...");
-      const jsonResponse = await fetch(jsonTranscript.link);
-      if (jsonResponse.ok) {
-        const jsonData: CalTranscriptData = await jsonResponse.json();
-        transcriptJson = {
-          words: jsonData.results.channels[0]?.alternatives[0]?.words || [],
-          utterances: jsonData.results.utterances || [],
-          metadata: jsonData.metadata
-        };
-        transcriptText = jsonData.results.channels[0]?.alternatives[0]?.transcript || '';
-        console.log("✅ JSON transcript processed", {
-          wordsCount: transcriptJson.words.length,
-          utterancesCount: transcriptJson.utterances.length,
-          textLength: transcriptText.length
+      const jsonController = new AbortController();
+      const jsonTimeout = setTimeout(() => jsonController.abort(), 180000); // 3 minute timeout for large transcripts
+      
+      try {
+        const jsonResponse = await fetch(jsonTranscript.link, {
+          signal: jsonController.signal
         });
+        clearTimeout(jsonTimeout);
+        
+        if (jsonResponse.ok) {
+          const jsonData: CalTranscriptData = await jsonResponse.json();
+          transcriptJson = {
+            words: jsonData.results.channels[0]?.alternatives[0]?.words || [],
+            utterances: jsonData.results.utterances || [],
+            metadata: jsonData.metadata
+          };
+          transcriptText = jsonData.results.channels[0]?.alternatives[0]?.transcript || '';
+          console.log("✅ JSON transcript processed", {
+            wordsCount: transcriptJson.words.length,
+            utterancesCount: transcriptJson.utterances.length,
+            textLength: transcriptText.length
+          });
+        }
+      } catch (error) {
+        clearTimeout(jsonTimeout);
+        console.log("⚠️ JSON transcript download failed:", error);
       }
     }
 
     // Download TXT transcript if JSON failed or as fallback
     if (!transcriptText && txtTranscript) {
       console.log("📥 Downloading TXT transcript...");
-      const txtResponse = await fetch(txtTranscript.link);
-      if (txtResponse.ok) {
-        transcriptText = await txtResponse.text();
-        console.log("✅ TXT transcript processed", { textLength: transcriptText.length });
+      const txtController = new AbortController();
+      const txtTimeout = setTimeout(() => txtController.abort(), 180000); // 3 minute timeout
+      
+      try {
+        const txtResponse = await fetch(txtTranscript.link, {
+          signal: txtController.signal
+        });
+        clearTimeout(txtTimeout);
+        
+        if (txtResponse.ok) {
+          transcriptText = await txtResponse.text();
+          console.log("✅ TXT transcript processed", { textLength: transcriptText.length });
+        }
+      } catch (error) {
+        clearTimeout(txtTimeout);
+        console.log("⚠️ TXT transcript download failed:", error);
       }
     }
 
@@ -603,30 +642,54 @@ async function processCalTranscriptionNoDelay(transcriptId: string, bookingUid: 
     // Download and process JSON transcript if available
     if (jsonTranscript) {
       console.log("📥 Downloading JSON transcript...");
-      const jsonResponse = await fetch(jsonTranscript.link);
-      if (jsonResponse.ok) {
-        const jsonData: CalTranscriptData = await jsonResponse.json();
-        transcriptJson = {
-          words: jsonData.results.channels[0]?.alternatives[0]?.words || [],
-          utterances: jsonData.results.utterances || [],
-          metadata: jsonData.metadata
-        };
-        transcriptText = jsonData.results.channels[0]?.alternatives[0]?.transcript || '';
-        console.log("✅ JSON transcript processed", {
-          wordsCount: transcriptJson.words.length,
-          utterancesCount: transcriptJson.utterances.length,
-          textLength: transcriptText.length
+      const jsonController = new AbortController();
+      const jsonTimeout = setTimeout(() => jsonController.abort(), 180000); // 3 minute timeout for large transcripts
+      
+      try {
+        const jsonResponse = await fetch(jsonTranscript.link, {
+          signal: jsonController.signal
         });
+        clearTimeout(jsonTimeout);
+        
+        if (jsonResponse.ok) {
+          const jsonData: CalTranscriptData = await jsonResponse.json();
+          transcriptJson = {
+            words: jsonData.results.channels[0]?.alternatives[0]?.words || [],
+            utterances: jsonData.results.utterances || [],
+            metadata: jsonData.metadata
+          };
+          transcriptText = jsonData.results.channels[0]?.alternatives[0]?.transcript || '';
+          console.log("✅ JSON transcript processed", {
+            wordsCount: transcriptJson.words.length,
+            utterancesCount: transcriptJson.utterances.length,
+            textLength: transcriptText.length
+          });
+        }
+      } catch (error) {
+        clearTimeout(jsonTimeout);
+        console.log("⚠️ JSON transcript download failed:", error);
       }
     }
 
     // Download TXT transcript if JSON failed or as fallback
     if (!transcriptText && txtTranscript) {
       console.log("📥 Downloading TXT transcript...");
-      const txtResponse = await fetch(txtTranscript.link);
-      if (txtResponse.ok) {
-        transcriptText = await txtResponse.text();
-        console.log("✅ TXT transcript processed", { textLength: transcriptText.length });
+      const txtController = new AbortController();
+      const txtTimeout = setTimeout(() => txtController.abort(), 180000); // 3 minute timeout
+      
+      try {
+        const txtResponse = await fetch(txtTranscript.link, {
+          signal: txtController.signal
+        });
+        clearTimeout(txtTimeout);
+        
+        if (txtResponse.ok) {
+          transcriptText = await txtResponse.text();
+          console.log("✅ TXT transcript processed", { textLength: transcriptText.length });
+        }
+      } catch (error) {
+        clearTimeout(txtTimeout);
+        console.log("⚠️ TXT transcript download failed:", error);
       }
     }
 

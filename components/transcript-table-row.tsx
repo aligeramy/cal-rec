@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { MeetingTranscript } from '@/lib/types'
 import { formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Archive, ArchiveRestore, Loader2 } from 'lucide-react'
+import { Archive, ArchiveRestore, Loader2, RotateCcw } from 'lucide-react'
 
 interface TranscriptTableRowProps {
   transcript: MeetingTranscript
@@ -16,6 +16,7 @@ interface TranscriptTableRowProps {
 const TranscriptTableRow: FC<TranscriptTableRowProps> = ({ transcript, isArchived = false }) => {
   const router = useRouter()
   const [isArchiving, setIsArchiving] = useState(false)
+  const [isRetrying, setIsRetrying] = useState(false)
 
   const handleRowClick = () => {
     router.push(`/dashboard/transcripts/${transcript.id}`)
@@ -50,6 +51,37 @@ const TranscriptTableRow: FC<TranscriptTableRowProps> = ({ transcript, isArchive
       toast.error(`Failed to ${isArchived ? 'unarchive' : 'archive'} transcript: ${error instanceof Error ? error.message : 'Unknown error'}`)
     } finally {
       setIsArchiving(false)
+    }
+  }
+
+  const handleRetry = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsRetrying(true)
+
+    try {
+      const response = await fetch('/api/transcripts/retry', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          transcriptId: transcript.id,
+        }),
+      })
+
+      if (response.ok) {
+        toast.success('Transcript retry started successfully')
+        router.refresh()
+      } else {
+        const error = await response.json()
+        throw new Error(error.message || 'Failed to retry transcript')
+      }
+    } catch (error) {
+      console.error('Error retrying transcript:', error)
+      toast.error(`Failed to retry transcript: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    } finally {
+      setIsRetrying(false)
     }
   }
 
@@ -104,6 +136,22 @@ const TranscriptTableRow: FC<TranscriptTableRowProps> = ({ transcript, isArchive
           >
             View
           </Link>
+          
+          {/* Retry button for failed transcripts */}
+          {transcript.status === 'failed' && !isArchived && (
+            <button
+              onClick={handleRetry}
+              disabled={isRetrying}
+              className="inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-lg border border-border bg-background hover:bg-muted/50 text-orange-600 hover:text-orange-700 transition-colors"
+              title="Retry transcript processing"
+            >
+              {isRetrying ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RotateCcw className="h-4 w-4" />
+              )}
+            </button>
+          )}
           
           <button
             onClick={handleArchiveToggle}

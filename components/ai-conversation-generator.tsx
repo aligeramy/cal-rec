@@ -396,7 +396,7 @@ export default function AIConversationGenerator({ onConversationGenerated }: AIC
               <div className="text-sm text-blue-800">
                 <div className="font-medium mb-1">AI Generation Info:</div>
                 <ul className="text-xs space-y-1">
-                  <li>• Conversations are generated using OpenAI GPT-4</li>
+                  <li>• Conversations are generated using OpenAI GPT-4o-mini</li>
                   <li>• Each template creates realistic, professional dialogue</li>
                   <li>• Generated conversations include proper timing and speaker separation</li>
                   <li>• Perfect for testing and demonstration purposes</li>
