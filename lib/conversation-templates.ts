@@ -11,10 +11,10 @@ export interface ConversationTemplate {
 export const conversationTemplates: ConversationTemplate[] = [
   {
     id: 'business-consultation',
-    name: 'Business Consultation',
-    description: 'A professional business consultation meeting',
+    name: 'Narcan Consultation',
+    description: 'A professional Narcan consultation meeting',
     duration: 30,
-    prompt: `Generate a realistic business consultation conversation between a client and a business consultant. 
+    prompt: `Generate a realistic Narcan consultation conversation between a client and a pharmacist. 
 
 The conversation should:
 - Be professional and natural

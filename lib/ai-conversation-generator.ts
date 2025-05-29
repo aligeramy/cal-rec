@@ -51,7 +51,7 @@ Return ONLY the JSON, no other text.`;
       messages: [
         {
           role: "system",
-          content: "You are an expert at generating realistic business conversations. You create natural, professional dialogue that sounds authentic and includes realistic timing and flow."
+          content: "Generate a conversation between a client and pharmacist. The client is a new client and the pharmacist is the host. The client is asking about a new prescription and the pharmacist is explaining the process. The client is looking for narcan. The pharmacist is specialized in narcan."
         },
         {
           role: "user",

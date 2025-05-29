@@ -29,8 +29,14 @@ export default async function TranscriptsPage({
     if (viewFilter === 'archived') {
       return { meetingType: 'archived' };
     } else {
-      const baseWhere: { meetingType: { not: string }; status?: string } = {
-        meetingType: { not: 'archived' }
+      const baseWhere: { 
+        OR: Array<{ meetingType?: { not: string } | null }>;
+        status?: string;
+      } = {
+        OR: [
+          { meetingType: { not: 'archived' } },
+          { meetingType: null }
+        ]
       };
       
       if (statusFilter) {
@@ -53,7 +59,12 @@ export default async function TranscriptsPage({
   // Get counts for all transcripts (excluding archived)
   const statusCounts = await prisma.meetingTranscript.groupBy({
     by: ['status'],
-    where: { meetingType: { not: 'archived' } },
+    where: { 
+      OR: [
+        { meetingType: { not: 'archived' } },
+        { meetingType: null }
+      ]
+    },
     _count: {
       status: true
     }

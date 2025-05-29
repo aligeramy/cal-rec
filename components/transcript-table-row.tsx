@@ -34,7 +34,7 @@ const TranscriptTableRow: FC<TranscriptTableRowProps> = ({ transcript, isArchive
         credentials: 'include',
         body: JSON.stringify({
           id: transcript.id,
-          meetingType: isArchived ? transcript.meetingType || 'meeting' : 'archived',
+          meetingType: isArchived ? null : 'archived',
         }),
       })
 
