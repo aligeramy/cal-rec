@@ -6,7 +6,10 @@ export async function POST(req: Request) {
   
   try {
     // Log all request headers
-    const headers = Object.fromEntries([...req.headers.entries()]);
+    const headers: Record<string, string> = {};
+    req.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
     console.log("📋 Headers:", JSON.stringify(headers, null, 2));
     
     // Log the request body
