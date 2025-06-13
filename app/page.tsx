@@ -75,7 +75,7 @@ export default async function Home() {
           
           <p className="text-xl text-slate-600 mb-10 max-w-3xl mx-auto leading-relaxed">
             Automatically transcribe, organize, and share your meeting conversations with professional-grade accuracy. 
-            Turn discussions into actionable insights with NotionIQ's intelligent transcription platform.
+            Turn discussions into actionable insights with NotionIQ&apos;s intelligent transcription platform.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">

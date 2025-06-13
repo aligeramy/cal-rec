@@ -65,7 +65,16 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
     setIsSaving(true)
     
     try {
-      const dataToUpdate: any = {
+      const dataToUpdate: {
+        id: string;
+        transcript?: string;
+        notes?: string;
+        hostName?: string;
+        hostEmail?: string;
+        startTime?: string;
+        endTime?: string;
+        duration?: number | null;
+      } = {
         id: transcript.id,
       };
       
@@ -413,7 +422,7 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
             />
             {!transcript.notes && !editedNotes && (
               <p className="text-sm text-muted-foreground">
-                💡 Tip: Click "Generate Notes" to automatically create professional meeting notes based on the transcript content.
+                💡 Tip: Click &quot;Generate Notes&quot; to automatically create professional meeting notes based on the transcript content.
               </p>
             )}
           </div>
