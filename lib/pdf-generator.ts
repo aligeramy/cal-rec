@@ -279,7 +279,7 @@ function generatePDFHTML(
         <div class="container">
           <!-- Header -->
           <div class="header">
-            <div class="logo">Meeting Transcripts</div>
+            <div class="logo">NotionIQ</div>
             <div class="title">${meetingTitle}</div>
             <div class="subtitle">Meeting Transcript Report</div>
           </div>

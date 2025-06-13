@@ -120,7 +120,7 @@ export function AppSidebar({ currentUser, ...props }: AppSidebarProps) {
         <Link href="/dashboard" className={`py-2 ${collapsed ? 'px-0 flex justify-center items-center' : 'px-4 flex items-center'}`}>
           <AudioWaveform className={`text-primary ${collapsed ? '' : 'mr-2'}`} />
           {!collapsed && (
-            <span className="font-bold text-lg whitespace-nowrap">Cal Transcript</span>
+            <span className="font-bold text-lg whitespace-nowrap">NotionIQ</span>
           )}
         </Link>
       </SidebarHeader>
