@@ -3,8 +3,6 @@
 import * as React from "react"
 import {
   AudioWaveform,
-  ServerCog,
-  UserCog,
 } from "lucide-react"
 import Link from "next/link"
 
@@ -20,7 +18,7 @@ import {
 } from "@/components/ui/sidebar"
 import { User } from "@/lib/types"
 
-// Sample navigation data
+// Navigation data with only real, working links
 const navMainData = [
   {
     title: "Dashboard",
@@ -37,56 +35,22 @@ const navMainData = [
             url: "/dashboard/transcripts",
           },
           {
-            title: "New / In Progress",
+            title: "Processing",
             url: "/dashboard/transcripts?status=processing",
           },
           {
-            title: "Failed / Errors",
+            title: "Completed",
+            url: "/dashboard/transcripts?status=completed",
+          },
+          {
+            title: "Failed",
             url: "/dashboard/transcripts?status=failed",
           },
+          {
+            title: "Archived",
+            url: "/dashboard/transcripts?view=archived",
+          },
         ]
-      },
-      {
-        title: "Search",
-        url: "#",
-      },
-    ],
-  },
-  {
-    title: "System",
-    url: "#",
-    icon: ServerCog,
-    items: [
-      {
-        title: "Processing Queue",
-        url: "#",
-      },
-      {
-        title: "Webhook Logs",
-        url: "#",
-      },
-      {
-        title: "Audio Storage",
-        url: "#",
-      },
-    ],
-  },
-  {
-    title: "Admin",
-    url: "#",
-    icon: UserCog,
-    items: [
-      {
-        title: "Profile",
-        url: "#",
-      },
-      {
-        title: "Settings",
-        url: "#",
-      },
-      {
-        title: "Sign Out",
-        url: "#",
       },
     ],
   },
