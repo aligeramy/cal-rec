@@ -134,14 +134,14 @@ export default async function DashboardPage() {
         </Card>
 
         {/* Completed Transcripts */}
-        <Card>
+        <Card className="bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium text-green-800 dark:text-green-200">Completed</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{completedCount}</div>
-            <p className="text-xs text-muted-foreground">
+            <div className="text-2xl font-bold text-green-800 dark:text-green-200">{completedCount}</div>
+            <p className="text-xs text-green-600 dark:text-green-400">
               {totalTranscripts > 0 ? Math.round((completedCount / totalTranscripts) * 100) : 0}% success rate
             </p>
           </CardContent>
@@ -212,7 +212,7 @@ export default async function DashboardPage() {
                   <div className="flex items-center space-x-4">
                     <div className="flex-shrink-0">
                       {transcript.status === 'completed' && (
-                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
                       )}
                       {transcript.status === 'processing' && (
                         <Clock className="h-5 w-5 text-blue-600 animate-pulse" />
@@ -225,7 +225,7 @@ export default async function DashboardPage() {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900 truncate">
+                      <p className="text-sm font-medium text-secondary truncate">
                         {transcript.title || 'Untitled Meeting'}
                       </p>
                       <div className="flex items-center space-x-2 text-xs text-muted-foreground">
@@ -249,9 +249,14 @@ export default async function DashboardPage() {
                   <div className="flex items-center space-x-2">
                     <Badge 
                       variant={
-                        transcript.status === 'completed' ? 'default' :
+                        transcript.status === 'completed' ? 'outline' :
                         transcript.status === 'processing' ? 'secondary' :
                         transcript.status === 'failed' ? 'destructive' : 'outline'
+                      }
+                      className={
+                        transcript.status === 'completed' 
+                          ? 'bg-green-50 text-green-800 border-green-200 hover:bg-green-100 dark:bg-green-950 dark:text-green-200 dark:border-green-800 dark:hover:bg-green-900' 
+                          : ''
                       }
                     >
                       {transcript.status.charAt(0).toUpperCase() + transcript.status.slice(1)}

@@ -140,15 +140,15 @@ export async function POST(req: Request) {
     }
 
     if (startTime !== undefined) {
-      updateData.startTime = startTime ? new Date(startTime) : null;
+      updateData.startTime = startTime ? new Date(startTime) : undefined;
     }
 
     if (endTime !== undefined) {
-      updateData.endTime = endTime ? new Date(endTime) : null;
+      updateData.endTime = endTime ? new Date(endTime) : undefined;
     }
 
     if (duration !== undefined) {
-      updateData.duration = duration ? parseInt(duration.toString()) : null;
+      updateData.duration = duration ? parseInt(duration.toString()) : undefined;
     }
 
     // Update the transcript in the database

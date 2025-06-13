@@ -64,13 +64,13 @@ export default async function TranscriptDetailPage({
               {transcript.clientName && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Name</dt>
-                  <dd className="text-sm text-gray-900">{transcript.clientName}</dd>
+                  <dd className="text-sm text-secondary">{transcript.clientName}</dd>
                 </div>
               )}
               {transcript.clientEmail && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Email</dt>
-                  <dd className="text-sm text-gray-900">{transcript.clientEmail}</dd>
+                  <dd className="text-sm text-secondary">{transcript.clientEmail}</dd>
                 </div>
               )}
             </dl>
@@ -83,13 +83,13 @@ export default async function TranscriptDetailPage({
               {transcript.hostName && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Name</dt>
-                  <dd className="text-sm text-gray-900">{transcript.hostName}</dd>
+                  <dd className="text-sm text-secondary">{transcript.hostName}</dd>
                 </div>
               )}
               {transcript.hostEmail && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Email</dt>
-                  <dd className="text-sm text-gray-900">{transcript.hostEmail}</dd>
+                  <dd className="text-sm text-secondary">{transcript.hostEmail}</dd>
                 </div>
               )}
             </dl>
@@ -101,24 +101,24 @@ export default async function TranscriptDetailPage({
             <dl className="mt-2 space-y-2">
               <div>
                 <dt className="text-sm font-medium text-gray-500">Booking ID</dt>
-                <dd className="text-sm text-gray-900">{transcript.bookingUid}</dd>
+                <dd className="text-sm text-secondary">{transcript.bookingUid}</dd>
               </div>
               {transcript.meetingType && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Meeting Type</dt>
-                  <dd className="text-sm text-gray-900">{transcript.meetingType}</dd>
+                  <dd className="text-sm text-secondary">{transcript.meetingType}</dd>
                 </div>
               )}
               {transcript.duration && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Duration</dt>
-                  <dd className="text-sm text-gray-900">{transcript.duration} minutes</dd>
+                  <dd className="text-sm text-secondary">{transcript.duration} minutes</dd>
                 </div>
               )}
               {transcript.location && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Location</dt>
-                  <dd className="text-sm text-gray-900">
+                  <dd className="text-sm text-secondary">
                     {transcript.location.startsWith('http') ? (
                       <a href={transcript.location} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                         View Meeting
@@ -134,20 +134,20 @@ export default async function TranscriptDetailPage({
         </div>
         
         {/* Time Information */}
-        <div className="grid grid-cols-3 gap-4 pt-4 border-t border-gray-200">
+        <div className="grid grid-cols-3 gap-4 pt-4 border-t border-border">
           <div>
             <h3 className="text-sm font-medium text-gray-500">Time Information</h3>
             <dl className="mt-2 space-y-2">
               {transcript.startTime && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">Start Time</dt>
-                  <dd className="text-sm text-gray-900">{formatDate(transcript.startTime)}</dd>
+                  <dd className="text-sm text-secondary">{formatDate(transcript.startTime)}</dd>
                 </div>
               )}
               {transcript.endTime && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500">End Time</dt>
-                  <dd className="text-sm text-gray-900">{formatDate(transcript.endTime)}</dd>
+                  <dd className="text-sm text-secondary">{formatDate(transcript.endTime)}</dd>
                 </div>
               )}
             </dl>
@@ -158,7 +158,7 @@ export default async function TranscriptDetailPage({
             <dl className="mt-2 space-y-2">
               <div>
                 <dt className="text-sm font-medium text-gray-500">Status</dt>
-                <dd className="text-sm text-gray-900">
+                <dd className="text-sm text-secondary">
                   <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium 
                     ${transcript.status === 'completed' ? 'bg-green-100 text-green-800' :
                       transcript.status === 'failed' ? 'bg-red-100 text-red-800' :
@@ -171,11 +171,11 @@ export default async function TranscriptDetailPage({
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Created</dt>
-                <dd className="text-sm text-gray-900">{formatDate(transcript.createdAt)}</dd>
+                <dd className="text-sm text-secondary">{formatDate(transcript.createdAt)}</dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500">Last Updated</dt>
-                <dd className="text-sm text-gray-900">{formatDate(transcript.updatedAt)}</dd>
+                <dd className="text-sm text-secondary">{formatDate(transcript.updatedAt)}</dd>
               </div>
             </dl>
           </div>

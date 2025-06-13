@@ -2,9 +2,11 @@
 
 import * as React from "react"
 import {
-  AudioWaveform,
+  FileText,
+  LayoutDashboard,
 } from "lucide-react"
 import Link from "next/link"
+import Image from "next/image"
 
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
@@ -18,39 +20,38 @@ import {
 } from "@/components/ui/sidebar"
 import { User } from "@/lib/types"
 
-// Navigation data with only real, working links
+// Navigation data with logical structure
 const navMainData = [
   {
     title: "Dashboard",
     url: "/dashboard",
-    icon: AudioWaveform,
+    icon: LayoutDashboard,
     isActive: true,
+  },
+  {
+    title: "Transcripts",
+    url: "/dashboard/transcripts",
+    icon: FileText,
     items: [
       {
         title: "All Transcripts",
         url: "/dashboard/transcripts",
-        items: [
-          {
-            title: "All Transcripts",
-            url: "/dashboard/transcripts",
-          },
-          {
-            title: "Processing",
-            url: "/dashboard/transcripts?status=processing",
-          },
-          {
-            title: "Completed",
-            url: "/dashboard/transcripts?status=completed",
-          },
-          {
-            title: "Failed",
-            url: "/dashboard/transcripts?status=failed",
-          },
-          {
-            title: "Archived",
-            url: "/dashboard/transcripts?view=archived",
-          },
-        ]
+      },
+      {
+        title: "Processing",
+        url: "/dashboard/transcripts?status=processing",
+      },
+      {
+        title: "Completed", 
+        url: "/dashboard/transcripts?status=completed",
+      },
+      {
+        title: "Failed",
+        url: "/dashboard/transcripts?status=failed",
+      },
+      {
+        title: "Archived",
+        url: "/dashboard/transcripts?view=archived",
       },
     ],
   },
@@ -82,7 +83,13 @@ export function AppSidebar({ currentUser, ...props }: AppSidebarProps) {
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <Link href="/dashboard" className={`py-2 ${collapsed ? 'px-0 flex justify-center items-center' : 'px-4 flex items-center'}`}>
-          <AudioWaveform className={`text-primary ${collapsed ? '' : 'mr-2'}`} />
+          <Image
+            src="/logo.svg"
+            alt="NotionIQ Logo"
+            width={24}
+            height={24}
+            className={`w-6 h-6 ${collapsed ? '' : 'mr-2'}`}
+          />
           {!collapsed && (
             <span className="font-bold text-lg whitespace-nowrap">NotionIQ</span>
           )}

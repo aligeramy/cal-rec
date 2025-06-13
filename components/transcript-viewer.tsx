@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { MeetingTranscript } from '@/lib/types'
 import { formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
-import { Loader2, Mail, Send, Edit, Save, X, FileText } from 'lucide-react'
+import { Loader2, Mail, Send, Edit, Save, X, FileText, User } from 'lucide-react'
 import {
   Tooltip,
   TooltipContent,
@@ -26,6 +26,9 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
   const [sendingToClient, setSendingToClient] = useState(false)
   const [sendingToAdmin, setSendingToAdmin] = useState(false)
   const [isGeneratingNotes, setIsGeneratingNotes] = useState(false)
+  
+  // View mode states
+  const [viewMode, setViewMode] = useState<'speaker' | 'full'>('speaker')
   
   // Edit states
   const [editedTranscript, setEditedTranscript] = useState(transcript.transcript || '')
@@ -53,12 +56,135 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
   
   // Use real transcript data
   const transcriptText = transcript.transcript || 'No transcript available'
+  
+  // Debug transcript data (remove these in production)
+  // console.log('Full transcript object:', transcript)
+  // console.log('transcript.transcript:', transcript.transcript)
+  // console.log('transcript.transcriptJson:', transcript.transcriptJson)
 
   // Client and admin email from transcript data
   const clientEmail = transcript.clientEmail
   const clientName = transcript.clientName
   const adminEmail = transcript.hostEmail
   const adminName = transcript.hostName
+
+  // Parse transcript JSON for speaker view
+  interface SpeakerUtterance {
+    id: number;
+    speaker: string;
+    speakerId: number;
+    text: string;
+    start: number;
+    end: number;
+  }
+
+  // Helper function to parse text transcript into speaker segments
+  const parseTranscriptText = (text: string) => {
+    const lines = text.split('\n').filter(line => line.trim())
+    const segments: { text: string; speaker: string }[] = []
+    let currentSpeaker = ''
+    let currentText = ''
+    
+    for (const line of lines) {
+      // Check if line starts with a speaker name (ends with :)
+      if (line.includes(':') && !line.startsWith(' ')) {
+        // Save previous segment if exists
+        if (currentText.trim()) {
+          segments.push({ text: currentText.trim(), speaker: currentSpeaker })
+        }
+        // Start new segment
+        const colonIndex = line.indexOf(':')
+        currentSpeaker = line.substring(0, colonIndex).trim()
+        currentText = line.substring(colonIndex + 1).trim()
+      } else {
+        // Continue current segment
+        currentText += ' ' + line.trim()
+      }
+    }
+    
+    // Don't forget the last segment
+    if (currentText.trim()) {
+      segments.push({ text: currentText.trim(), speaker: currentSpeaker })
+    }
+    
+    return segments
+  }
+
+  const parseTranscriptForSpeakers = (): SpeakerUtterance[] => {
+    try {
+      if (!transcript.transcriptJson) {
+        console.log('No transcriptJson found, trying to parse from plain text')
+        // Fallback: try to create speakers from plain text if JSON not available
+        if (transcript.transcript) {
+          const lines = transcript.transcript.split('\n').filter(line => line.trim())
+          return lines.map((line, index) => ({
+            id: index,
+            speaker: index % 2 === 0 ? (clientName || 'Client') : (adminName || 'Host'),
+            speakerId: index % 2,
+            text: line.trim(),
+            start: index * 10,
+            end: (index * 10) + 10
+          }))
+        }
+        return []
+      }
+      
+      const transcriptData = typeof transcript.transcriptJson === 'string' 
+        ? JSON.parse(transcript.transcriptJson) 
+        : transcript.transcriptJson
+
+      if (transcriptData?.utterances && Array.isArray(transcriptData.utterances)) {
+        
+        // If utterances don't have text, try to extract from main transcript
+        const hasTextInUtterances = transcriptData.utterances.some((u: { text?: string }) => u.text && u.text.trim())
+        
+        if (!hasTextInUtterances && transcript.transcript) {
+          // Parse the main transcript to extract speaker segments  
+          const textSegments = parseTranscriptText(transcript.transcript)
+          
+          return transcriptData.utterances.map((utterance: { speaker: number; text: string; start?: number; end?: number }, index: number) => {
+            const textSegment = textSegments[index] || { text: '', speaker: '' }
+            return {
+              id: index,
+              speaker: utterance.speaker === 0 ? (clientName || 'Client') : (adminName || 'Host'),
+              speakerId: utterance.speaker,
+              text: textSegment.text || '',
+              start: utterance.start || 0,
+              end: utterance.end || 0
+            }
+          })
+        }
+        
+        return transcriptData.utterances.map((utterance: { speaker: number; text: string; start?: number; end?: number }, index: number) => ({
+          id: index,
+          speaker: utterance.speaker === 0 ? (clientName || 'Client') : (adminName || 'Host'),
+          speakerId: utterance.speaker,
+          text: utterance.text || '',
+          start: utterance.start || 0,
+          end: utterance.end || 0
+        }))
+      }
+
+      // Try alternative structure
+      if (transcriptData?.segments && Array.isArray(transcriptData.segments)) {
+        return transcriptData.segments.map((segment: { speaker: number; text: string; duration?: number }, index: number) => ({
+          id: index,
+          speaker: segment.speaker === 0 ? (clientName || 'Client') : (adminName || 'Host'),
+          speakerId: segment.speaker,
+          text: segment.text || '',
+          start: index * (segment.duration || 10),
+          end: (index + 1) * (segment.duration || 10)
+        }))
+      }
+      
+      return []
+    } catch (error) {
+      console.error('Error parsing transcript JSON:', error)
+      return []
+    }
+  }
+
+  const speakerUtterances = parseTranscriptForSpeakers()
   
   // Save edited content to the database
   const saveEdits = async (type: 'transcript' | 'notes' | 'details') => {
@@ -206,10 +332,36 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
     }
   }
   
-  const renderSectionHeader = (title: string, isEditing: boolean, setEditing: (editing: boolean) => void, handleSave: () => void, showGenerateButton?: boolean) => (
+  const renderSectionHeader = (title: string, isEditing: boolean, setEditing: (editing: boolean) => void, handleSave: () => void, showGenerateButton?: boolean, showViewOptions?: boolean) => (
     <div className="flex items-center justify-between mb-4">
       <h3 className="text-lg font-semibold">{title}</h3>
       <div className="flex space-x-2">
+        {/* View mode buttons for transcript */}
+        {showViewOptions && !isEditing && (
+          <div className="flex items-center space-x-1 mr-2">
+            <button
+              onClick={() => setViewMode('speaker')}
+              className={`inline-flex items-center text-xs px-3 py-1.5 rounded-md transition-colors ${
+                viewMode === 'speaker' 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+              }`}
+            >
+              Speaker View
+            </button>
+            <button
+              onClick={() => setViewMode('full')}
+              className={`inline-flex items-center text-xs px-3 py-1.5 rounded-md transition-colors ${
+                viewMode === 'full' 
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+              }`}
+            >
+              Full View
+            </button>
+          </div>
+        )}
+        
         {/* Generate Notes button for notes when editing */}
         {showGenerateButton && isEditing && (
           <button
@@ -379,24 +531,24 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
         ) : (
           <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg border">
             <div>
-              <span className="block text-sm font-medium text-gray-500">Host Name</span>
-              <span className="text-sm">{transcript.hostName || 'Not specified'}</span>
+              <span className="block text-sm font-medium text-muted-foreground">Host Name</span>
+              <span className="text-sm text-foreground">{transcript.hostName || 'Not specified'}</span>
             </div>
             <div>
-              <span className="block text-sm font-medium text-gray-500">Host Email</span>
-              <span className="text-sm">{transcript.hostEmail || 'Not specified'}</span>
+              <span className="block text-sm font-medium text-muted-foreground">Host Email</span>
+              <span className="text-sm text-foreground">{transcript.hostEmail || 'Not specified'}</span>
             </div>
             <div>
-              <span className="block text-sm font-medium text-gray-500">Start Time</span>
-              <span className="text-sm">{transcript.startTime ? formatDate(transcript.startTime) : 'Not specified'}</span>
+              <span className="block text-sm font-medium text-muted-foreground">Start Time</span>
+              <span className="text-sm text-foreground">{transcript.startTime ? formatDate(transcript.startTime) : 'Not specified'}</span>
             </div>
             <div>
-              <span className="block text-sm font-medium text-gray-500">End Time</span>
-              <span className="text-sm">{transcript.endTime ? formatDate(transcript.endTime) : 'Not specified'}</span>
+              <span className="block text-sm font-medium text-muted-foreground">End Time</span>
+              <span className="text-sm text-foreground">{transcript.endTime ? formatDate(transcript.endTime) : 'Not specified'}</span>
             </div>
             <div>
-              <span className="block text-sm font-medium text-gray-500">Duration</span>
-              <span className="text-sm">{transcript.duration ? `${transcript.duration} minutes` : 'Not specified'}</span>
+              <span className="block text-sm font-medium text-muted-foreground">Duration</span>
+              <span className="text-sm text-foreground">{transcript.duration ? `${transcript.duration} minutes` : 'Not specified'}</span>
             </div>
           </div>
         )}
@@ -451,7 +603,9 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
           "Full Transcript", 
           isEditingTranscript, 
           setIsEditingTranscript,
-          () => saveEdits('transcript')
+          () => saveEdits('transcript'),
+          false,
+          true
         )}
         
         {isEditingTranscript ? (
@@ -463,9 +617,65 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
           />
         ) : transcript.status === 'completed' ? (
           <div className="bg-muted/50 rounded-lg p-6 text-sm border">
-            <div className="whitespace-pre-wrap leading-relaxed text-sm max-h-96 overflow-y-auto pr-2">
-              {transcriptText}
-            </div>
+            {viewMode === 'speaker' ? (
+              speakerUtterances.length > 0 ? (
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {speakerUtterances.map((utterance) => (
+                    <div key={utterance.id} className="flex items-start space-x-3">
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
+                        utterance.speakerId === 0 
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' 
+                          : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                      }`}>
+                        {utterance.speaker.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="text-sm font-medium text-foreground">
+                            {utterance.speaker}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            {Math.floor(utterance.start / 60)}:{(utterance.start % 60).toString().padStart(2, '0')}
+                          </span>
+                        </div>
+                        <div className={`p-3 rounded-lg text-sm leading-relaxed ${
+                          utterance.speakerId === 0 
+                            ? 'bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-100' 
+                            : 'bg-green-50 text-green-900 dark:bg-green-950 dark:text-green-100'
+                        }`}>
+                          {utterance.text}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <User className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">Speaker data not available</h3>
+                  <p className="text-muted-foreground mb-4">
+                    This transcript doesn&apos;t have speaker-separated data. Try the Full View instead.
+                  </p>
+                  <button
+                    onClick={() => setViewMode('full')}
+                    className="text-primary hover:underline text-sm"
+                  >
+                    Switch to Full View →
+                  </button>
+                </div>
+              )
+            ) : (
+              <div className="whitespace-pre-wrap leading-relaxed text-sm max-h-96 overflow-y-auto pr-2">
+                {transcriptText}
+                {transcriptText === 'No transcript available' && (
+                  <div className="text-center py-4 text-muted-foreground">
+                    <p>No transcript content found.</p>
+                    <p className="text-xs mt-2">Transcript ID: {transcript.id}</p>
+                    <p className="text-xs">Status: {transcript.status}</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : transcript.status === 'processing' ? (
           <div className="bg-muted/50 rounded-lg p-6 text-sm text-muted-foreground border flex items-center justify-center">
