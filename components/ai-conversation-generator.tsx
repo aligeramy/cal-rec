@@ -51,6 +51,8 @@ export default function AIConversationGenerator({ onConversationGenerated }: AIC
   const [customClientName, setCustomClientName] = useState('')
   const [customClientEmail, setCustomClientEmail] = useState('')
   const [selectedHost, setSelectedHost] = useState('')
+  const [customHostName, setCustomHostName] = useState('')
+  const [customHostEmail, setCustomHostEmail] = useState('')
   const [title, setTitle] = useState('')
   const [customTemplate, setCustomTemplate] = useState('')
   const [clients, setClients] = useState<Client[]>([])
@@ -58,20 +60,21 @@ export default function AIConversationGenerator({ onConversationGenerated }: AIC
   const [loadingClients, setLoadingClients] = useState(false)
   const [loadingUsers, setLoadingUsers] = useState(false)
   const [showCustomClient, setShowCustomClient] = useState(false)
+  const [showCustomHost, setShowCustomHost] = useState(false)
 
   const templates = getTemplateNames()
   const isCustomTemplate = templateId === 'custom'
 
   // Auto-populate host when dialog opens
   useEffect(() => {
-    if (isOpen && session?.user) {
+    if (isOpen && session?.user && !showCustomHost) {
       // Find the current user in the users list and select them
       const currentUser = users.find(user => user.email === session.user?.email)
       if (currentUser) {
         setSelectedHost(currentUser.displayName)
       }
     }
-  }, [isOpen, session, users])
+  }, [isOpen, session, users, showCustomHost])
 
   // Fetch clients and users when dialog opens
   useEffect(() => {
@@ -139,8 +142,13 @@ export default function AIConversationGenerator({ onConversationGenerated }: AIC
         return
       }
 
-      if (!selectedHost) {
-        toast.error('Please select a host')
+      if (showCustomHost && !customHostName.trim()) {
+        toast.error('Please enter a host name')
+        return
+      }
+
+      if (!showCustomHost && !selectedHost) {
+        toast.error('Please select a host or add a new one')
         return
       }
 
@@ -154,8 +162,8 @@ export default function AIConversationGenerator({ onConversationGenerated }: AIC
           customTemplate: isCustomTemplate ? customTemplate : undefined,
           clientName: showCustomClient ? customClientName : selectedClient,
           clientEmail: showCustomClient ? customClientEmail : undefined,
-          hostName: selectedHost,
-          hostEmail: undefined,
+          hostName: showCustomHost ? customHostName : selectedHost,
+          hostEmail: showCustomHost ? customHostEmail : undefined,
           title: `${templates.find(t => t.id === templateId)?.name || 'Custom Template'}`
         }),
       })
@@ -170,9 +178,12 @@ export default function AIConversationGenerator({ onConversationGenerated }: AIC
         setCustomClientName('')
         setCustomClientEmail('')
         setSelectedHost('')
+        setCustomHostName('')
+        setCustomHostEmail('')
         setTitle('')
         setCustomTemplate('')
         setShowCustomClient(false)
+        setShowCustomHost(false)
         setIsOpen(false)
 
         // Notify parent component
@@ -351,31 +362,92 @@ export default function AIConversationGenerator({ onConversationGenerated }: AIC
           {/* Host Selection */}
           <div className="space-y-2">
             <Label>Host Selection *</Label>
-            <Select value={selectedHost} onValueChange={setSelectedHost} disabled={loadingUsers}>
-              <SelectTrigger className="text-left w-full">
-                <SelectValue 
-                  placeholder={loadingUsers ? "Loading hosts..." : "Select a host..."} 
-                  className="text-left"
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {users.map((user) => (
-                  <SelectItem key={user.id || `user-${user.email || user.name}`} value={user.displayName} className="text-left">
-                    <div className="flex items-center space-x-2 text-left">
-                      <User className="h-4 w-4" />
-                      <span className="truncate max-w-[200px]" title={user.displayName}>
-                        {user.displayName.length > 30 ? `${user.displayName.substring(0, 30)}...` : user.displayName}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
-                {users.length === 0 && !loadingUsers && (
-                  <SelectItem value="no-hosts" disabled className="text-left">
-                    <span className="text-muted-foreground">No existing hosts found</span>
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
+            
+            {!showCustomHost ? (
+              <div className="flex items-center gap-3">
+                <div className="flex-1">
+                  <Select value={selectedHost} onValueChange={setSelectedHost} disabled={loadingUsers}>
+                    <SelectTrigger className="text-left w-full">
+                      <SelectValue 
+                        placeholder={loadingUsers ? "Loading hosts..." : "Select an existing host..."} 
+                        className="text-left"
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users.map((user) => (
+                        <SelectItem key={user.id || `user-${user.email || user.name}`} value={user.displayName} className="text-left">
+                          <div className="flex items-center space-x-2 text-left">
+                            <User className="h-4 w-4" />
+                            <span className="truncate max-w-[200px]" title={user.displayName}>
+                              {user.displayName.length > 30 ? `${user.displayName.substring(0, 30)}...` : user.displayName}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                      {users.length === 0 && !loadingUsers && (
+                        <SelectItem value="no-hosts" disabled className="text-left">
+                          <span className="text-muted-foreground">No existing hosts found</span>
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="text-sm text-muted-foreground font-medium">
+                  or
+                </div>
+                
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowCustomHost(true)}
+                  className="whitespace-nowrap"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add New Host
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3 p-3 border rounded-md bg-muted/50">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">New Host Details</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setShowCustomHost(false)
+                      setCustomHostName('')
+                      setCustomHostEmail('')
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="customHostName" className="text-xs">Host Name *</Label>
+                    <Input
+                      id="customHostName"
+                      placeholder="Enter host name"
+                      value={customHostName}
+                      onChange={(e) => setCustomHostName(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="customHostEmail" className="text-xs">Host Email</Label>
+                    <Input
+                      id="customHostEmail"
+                      type="email"
+                      placeholder="host@example.com"
+                      value={customHostEmail}
+                      onChange={(e) => setCustomHostEmail(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Title */}
@@ -389,21 +461,7 @@ export default function AIConversationGenerator({ onConversationGenerated }: AIC
             />
           </div>
 
-          {/* Info Box */}
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
-            <div className="flex items-start space-x-2">
-              <Sparkles className="h-4 w-4 text-blue-600 mt-0.5" />
-              <div className="text-sm text-blue-800">
-                <div className="font-medium mb-1">AI Generation Info:</div>
-                <ul className="text-xs space-y-1">
-                  <li>• Conversations are generated using OpenAI GPT-4o-mini</li>
-                  <li>• Each template creates realistic, professional dialogue</li>
-                  <li>• Generated conversations include proper timing and speaker separation</li>
-                  <li>• Perfect for testing and demonstration purposes</li>
-                </ul>
-              </div>
-            </div>
-          </div>
+       
         </div>
 
         <div className="flex justify-end space-x-2">
@@ -416,7 +474,7 @@ export default function AIConversationGenerator({ onConversationGenerated }: AIC
           </Button>
           <Button 
             onClick={handleGenerate}
-            disabled={isGenerating || !templateId || (isCustomTemplate && !customTemplate.trim()) || (!selectedClient && !showCustomClient) || (showCustomClient && !customClientName.trim()) || !selectedHost}
+            disabled={isGenerating || !templateId || (isCustomTemplate && !customTemplate.trim()) || (!selectedClient && !showCustomClient) || (showCustomClient && !customClientName.trim()) || (!selectedHost && !showCustomHost) || (showCustomHost && !customHostName.trim())}
             className={cn(
               "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700",
               isGenerating && "opacity-50"

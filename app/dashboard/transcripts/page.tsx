@@ -5,7 +5,6 @@ import Link from "next/link";
 import { MeetingTranscript } from "@/lib/types";
 import TranscriptTableRow from "@/components/transcript-table-row";
 import TranscriptsPageClient from "@/components/transcripts-page-client";
-import { Badge } from "@/components/ui/badge";
 import { Archive, FileText, Clock, CheckCircle, XCircle } from "lucide-react";
 
 export default async function TranscriptsPage({ 
@@ -107,20 +106,13 @@ export default async function TranscriptsPage({
   return (
     <div className="flex flex-col space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            {viewFilter === 'archived' 
-              ? 'Archived Transcripts'
-              : statusFilter 
-                ? `${statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)} Transcripts` 
-                : "Meeting Transcripts"}
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            {viewFilter === 'archived' 
-              ? 'View and manage your archived meeting transcripts'
-              : 'Manage your meeting transcripts and recordings'}
-          </p>
-        </div>
+        <h1 className="text-3xl font-bold tracking-tight">
+          {viewFilter === 'archived' 
+            ? 'Archived Transcripts'
+            : statusFilter 
+              ? `${statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)} Transcripts` 
+              : "Meeting Transcripts"}
+        </h1>
         <div className="flex space-x-3">
           <TranscriptsPageClient />
           <Link 
@@ -141,9 +133,13 @@ export default async function TranscriptsPage({
           >
             <FileText className="h-4 w-4" />
             All Transcripts
-            <Badge variant="secondary" className="ml-1">
+            <div className={`ml-1 px-2 py-1 text-xs font-medium rounded border ${
+              !statusFilter && viewFilter !== 'archived' 
+                ? 'text-primary-foreground' 
+                : 'text-secondary-foreground'
+            }`}>
               {totalActive}
-            </Badge>
+            </div>
           </Link>
           
           <Link
@@ -152,9 +148,13 @@ export default async function TranscriptsPage({
           >
             {getStatusIcon('processing')}
             Processing
-            <Badge variant="secondary" className="ml-1">
+            <div className={`ml-1 px-2 py-1 text-xs font-medium rounded border ${
+              statusFilter === 'processing' 
+                ? 'text-primary-foreground' 
+                : 'text-secondary-foreground'
+            }`}>
               {counts['processing'] || 0}
-            </Badge>
+            </div>
           </Link>
           
           <Link
@@ -163,9 +163,13 @@ export default async function TranscriptsPage({
           >
             {getStatusIcon('completed')}
             Completed
-            <Badge variant="secondary" className="ml-1">
+            <div className={`ml-1 px-2 py-1 text-xs font-medium rounded border ${
+              statusFilter === 'completed' 
+                ? 'text-primary-foreground' 
+                : 'text-secondary-foreground'
+            }`}>
               {counts['completed'] || 0}
-            </Badge>
+            </div>
           </Link>
           
           <Link
@@ -174,9 +178,13 @@ export default async function TranscriptsPage({
           >
             {getStatusIcon('failed')}
             Failed
-            <Badge variant="secondary" className="ml-1">
+            <div className={`ml-1 px-2 py-1 text-xs font-medium rounded border ${
+              statusFilter === 'failed' 
+                ? 'text-primary-foreground' 
+                : 'text-secondary-foreground'
+            }`}>
               {counts['failed'] || 0}
-            </Badge>
+            </div>
           </Link>
           
           <Link
@@ -185,9 +193,13 @@ export default async function TranscriptsPage({
           >
             <Archive className="h-4 w-4" />
             Archived
-            <Badge variant="secondary" className="ml-1">
+            <div className={`ml-1 px-2 py-1 text-xs font-medium rounded border ${
+              viewFilter === 'archived' 
+                ? 'text-primary-foreground' 
+                : 'text-secondary-foreground'
+            }`}>
               {archivedCount}
-            </Badge>
+            </div>
           </Link>
         </nav>
       </div>

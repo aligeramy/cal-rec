@@ -7,7 +7,6 @@ import {
   Mic, 
   Users, 
   Clock, 
-  CheckCircle, 
   ArrowRight,
   Sparkles,
   Mail,
@@ -44,18 +43,11 @@ export default async function Home() {
                   </Button>
                 </Link>
               ) : (
-                <>
-                  <Link href="/login">
-                    <Button variant="ghost" className="text-slate-600 hover:text-slate-900">
-                      Sign In
-                    </Button>
-                  </Link>
-                  <Link href="/signup">
-                    <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
-                      Get Started
-                    </Button>
-                  </Link>
-                </>
+                <Link href="/login">
+                  <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                    Sign In
+                  </Button>
+                </Link>
               )}
             </div>
           </div>
@@ -93,19 +85,12 @@ export default async function Home() {
                 </Button>
               </Link>
             ) : (
-              <>
-                <Link href="/signup">
-                  <Button size="lg" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 px-8 py-3 text-lg">
-                    Start Free Trial
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
-                <Link href="/login">
-                  <Button size="lg" variant="outline" className="px-8 py-3 text-lg border-slate-300 hover:border-slate-400">
-                    Sign In
-                  </Button>
-                </Link>
-              </>
+              <Link href="/login">
+                <Button size="lg" className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 px-8 py-3 text-lg">
+                  Sign In
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
             )}
           </div>
         </div>
@@ -214,19 +199,12 @@ export default async function Home() {
               </Button>
             </Link>
           ) : (
-            <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
-              <Link href="/signup">
-                <Button size="lg" variant="secondary" className="px-8 py-3 text-lg bg-white text-blue-600 hover:bg-blue-50">
-                  Start Your Free Trial
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              <Link href="/login">
-                <Button size="lg" variant="outline" className="px-8 py-3 text-lg border-white text-white hover:bg-white/10">
-                  Sign In
-                </Button>
-              </Link>
-            </div>
+            <Link href="/login">
+              <Button size="lg" variant="secondary" className="px-8 py-3 text-lg bg-white text-blue-600 hover:bg-blue-50">
+                Sign In
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
           )}
         </div>
       </section>
@@ -247,11 +225,8 @@ export default async function Home() {
             </div>
             
             <div className="flex items-center space-x-6">
-              <span className="text-sm">© 2024 NotionIQ. All rights reserved.</span>
-              <div className="flex items-center space-x-1">
-                <CheckCircle className="h-4 w-4 text-green-400" />
-                <span className="text-sm">Secure & Private</span>
-              </div>
+              <span className="text-sm">© 2025 NotionIQ. All rights reserved.</span>
+              
             </div>
           </div>
         </div>

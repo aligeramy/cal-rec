@@ -101,17 +101,9 @@ export function LoginForm({
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? "Logging in..." : "Login"}
                 </Button>
-                <Button variant="outline" className="w-full" type="button" onClick={() => signIn("google", { callbackUrl: "/dashboard" })}>
-                  Login with Google
-                </Button>
               </div>
             </div>
-            <div className="mt-4 text-center text-sm">
-              Don&apos;t have an account?{" "}
-              <a href="/signup" className="underline underline-offset-4">
-                Sign up
-              </a>
-            </div>
+
           </form>
         </CardContent>
       </Card>

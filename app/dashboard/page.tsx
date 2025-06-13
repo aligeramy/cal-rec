@@ -102,12 +102,7 @@ export default async function DashboardPage() {
     <div className="flex flex-col gap-6">
       {/* Header */}
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
-            Overview of your meeting transcriptions and analytics
-          </p>
-        </div>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <Link 
           href="/dashboard/transcripts" 
           className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
