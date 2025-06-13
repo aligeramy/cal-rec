@@ -88,7 +88,7 @@ export function AppSidebar({ currentUser, ...props }: AppSidebarProps) {
             alt="NotionIQ Logo"
             width={24}
             height={24}
-            className={`w-6 h-6 ${collapsed ? '' : 'mr-2'}`}
+            className={`w-6 h-6 dark:filter dark:brightness-0 dark:invert ${collapsed ? '' : 'mr-2'}`}
           />
           {!collapsed && (
             <span className="font-bold text-lg whitespace-nowrap">NotionIQ</span>

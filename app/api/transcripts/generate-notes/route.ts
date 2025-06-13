@@ -62,7 +62,14 @@ Your notes should include:
 - Important topics covered
 - Next steps (if mentioned)
 
-Format the notes in a clean, professional manner using markdown formatting. Be concise but thorough.`
+IMPORTANT: Format the notes using proper Markdown syntax including:
+- Use # for main headings (e.g., # Meeting Notes: [Title])
+- Use ## for section headings (e.g., ## Meeting Summary, ## Key Discussion Points)
+- Use **bold** for emphasis on important items
+- Use bullet points with - for lists
+- Use proper line breaks between sections
+
+Be concise but thorough. Always return the notes in valid Markdown format.`
         },
         {
           role: "user",

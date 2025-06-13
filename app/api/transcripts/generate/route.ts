@@ -93,7 +93,7 @@ export async function POST(req: Request) {
         duration: generatedConversation.duration,
         meetingType: `${template.name}`,
         location: 'Generated Conversation',
-        notes: `This conversation was generated using AI based on the "${template.name}" template.`,
+        notes: ``,
         recordingUrl: null,
       },
     });

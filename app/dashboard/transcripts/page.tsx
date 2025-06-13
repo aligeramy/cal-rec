@@ -4,8 +4,9 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { MeetingTranscript } from "@/lib/types";
 import TranscriptTableRow from "@/components/transcript-table-row";
-import TranscriptsPageClient from "@/components/transcripts-page-client";
+
 import { Archive, FileText, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export default async function TranscriptsPage({ 
   searchParams 
@@ -105,24 +106,6 @@ export default async function TranscriptsPage({
 
   return (
     <div className="flex flex-col space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">
-          {viewFilter === 'archived' 
-            ? 'Archived Transcripts'
-            : statusFilter 
-              ? `${statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)} Transcripts` 
-              : "Meeting Transcripts"}
-        </h1>
-        <div className="flex space-x-3">
-          <TranscriptsPageClient />
-          <Link 
-            href="/dashboard" 
-            className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg border border-border bg-background hover:bg-muted/50 transition-colors"
-          >
-            Back to Dashboard
-          </Link>
-        </div>
-      </div>
       
       {/* Professional Tabs */}
       <div className="border-b border-border">
@@ -133,13 +116,9 @@ export default async function TranscriptsPage({
           >
             <FileText className="h-4 w-4" />
             All Transcripts
-            <div className={`ml-1 px-2 py-1 text-xs font-medium rounded border ${
-              !statusFilter && viewFilter !== 'archived' 
-                ? 'text-primary-foreground' 
-                : 'text-secondary-foreground'
-            }`}>
+            <Badge variant="outline" className={`ml-1 ${(!statusFilter && viewFilter !== 'archived') ? 'text-primary-foreground' : ''}`}>
               {totalActive}
-            </div>
+            </Badge>
           </Link>
           
           <Link
@@ -148,13 +127,9 @@ export default async function TranscriptsPage({
           >
             {getStatusIcon('processing')}
             Processing
-            <div className={`ml-1 px-2 py-1 text-xs font-medium rounded border ${
-              statusFilter === 'processing' 
-                ? 'text-primary-foreground' 
-                : 'text-secondary-foreground'
-            }`}>
+            <Badge variant="outline" className={`ml-1 ${statusFilter === 'processing' ? 'text-primary-foreground' : ''}`}>
               {counts['processing'] || 0}
-            </div>
+            </Badge>
           </Link>
           
           <Link
@@ -163,13 +138,9 @@ export default async function TranscriptsPage({
           >
             {getStatusIcon('completed')}
             Completed
-            <div className={`ml-1 px-2 py-1 text-xs font-medium rounded border ${
-              statusFilter === 'completed' 
-                ? 'text-primary-foreground' 
-                : 'text-secondary-foreground'
-            }`}>
+            <Badge variant="outline" className={`ml-1 ${statusFilter === 'completed' ? 'text-primary-foreground' : ''}`}>
               {counts['completed'] || 0}
-            </div>
+            </Badge>
           </Link>
           
           <Link
@@ -178,13 +149,9 @@ export default async function TranscriptsPage({
           >
             {getStatusIcon('failed')}
             Failed
-            <div className={`ml-1 px-2 py-1 text-xs font-medium rounded border ${
-              statusFilter === 'failed' 
-                ? 'text-primary-foreground' 
-                : 'text-secondary-foreground'
-            }`}>
+            <Badge variant="outline" className={`ml-1 ${statusFilter === 'failed' ? 'text-primary-foreground' : ''}`}>
               {counts['failed'] || 0}
-            </div>
+            </Badge>
           </Link>
           
           <Link
@@ -193,13 +160,9 @@ export default async function TranscriptsPage({
           >
             <Archive className="h-4 w-4" />
             Archived
-            <div className={`ml-1 px-2 py-1 text-xs font-medium rounded border ${
-              viewFilter === 'archived' 
-                ? 'text-primary-foreground' 
-                : 'text-secondary-foreground'
-            }`}>
+            <Badge variant="outline" className={`ml-1 ${viewFilter === 'archived' ? 'text-primary-foreground' : ''}`}>
               {archivedCount}
-            </div>
+            </Badge>
           </Link>
         </nav>
       </div>

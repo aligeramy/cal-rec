@@ -9,8 +9,7 @@ export interface ConversationTemplate {
 }
 
 export const conversationTemplates: ConversationTemplate[] = [
-  {
-    id: 'narcan-consultation',
+  { id: 'narcan-consultation',
     name: 'Narcan Consultation',
     description: 'A professional Narcan consultation meeting',
     duration: 30,

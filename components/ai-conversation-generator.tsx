@@ -26,9 +26,11 @@ import {
 import { cn } from '@/lib/utils'
 
 interface Client {
+  id: string;
   name: string;
   email: string | null;
   displayName: string;
+  count: number;
 }
 
 interface User {
@@ -90,6 +92,8 @@ export default function AIConversationGenerator({ onConversationGenerated }: AIC
       const response = await fetch('/api/clients')
       if (response.ok) {
         const data = await response.json()
+        console.log('🔍 Received clients data:', data.clients?.length, 'clients')
+        console.log('📋 Client details:', data.clients?.map((c: Client) => ({ name: c.name, email: c.email, count: c.count })))
         setClients(data.clients || [])
       } else {
         console.error('Failed to fetch clients')
@@ -207,14 +211,14 @@ export default function AIConversationGenerator({ onConversationGenerated }: AIC
       <DialogTrigger asChild>
         <Button 
           variant="outline" 
-          className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 hover:from-purple-100 hover:to-blue-100 text-purple-700 hover:text-purple-800"
+          className="inline-flex items-center space-x-2 bg-gradient-to-r from-purple-50 to-blue-50 border-purple-200 hover:from-purple-100 hover:to-blue-100 text-purple-700 hover:text-purple-800 dark:from-purple-950/30 dark:to-blue-950/30 dark:border-purple-700 dark:hover:from-purple-900/50 dark:hover:to-blue-900/50 dark:text-purple-300 dark:hover:text-purple-200"
         >
           <span>Generate Conversation</span>
           <Sparkles className="h-3 w-3" />
         </Button>
       </DialogTrigger>
       
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
             <span>Generate Conversation</span>
@@ -237,14 +241,15 @@ export default function AIConversationGenerator({ onConversationGenerated }: AIC
                   <SelectItem key={template.id} value={template.id} className="text-left">
                     <div className="text-left">
                       <div className="font-medium text-left">{template.name}</div>
-                      <div className="text-xs text-muted-foreground text-left">{template.description}</div>
+                      {template.id !== 'narcan-consultation' && (
+                        <div className="text-xs text-muted-foreground text-left">{template.description}</div>
+                      )}
                     </div>
                   </SelectItem>
                 ))}
                 <SelectItem value="custom" className="text-left">
                   <div className="text-left">
                     <div className="font-medium text-left">Custom Template</div>
-                    <div className="text-xs text-muted-foreground text-left">Create your own conversation template</div>
                   </div>
                 </SelectItem>
               </SelectContent>
@@ -279,17 +284,22 @@ export default function AIConversationGenerator({ onConversationGenerated }: AIC
                     <SelectTrigger className="text-left w-full">
                       <SelectValue 
                         placeholder={loadingClients ? "Loading clients..." : "Select an existing client..."} 
-                        className="text-left"
+                        className="text-left truncate"
                       />
                     </SelectTrigger>
-                    <SelectContent>
-                      {clients.map((client, index) => (
-                        <SelectItem key={`client-${client.email || client.name}-${index}`} value={client.displayName} className="text-left">
-                          <div className="flex items-center space-x-2 text-left">
-                            <User className="h-4 w-4" />
-                            <span className="truncate max-w-[200px]" title={client.displayName}>
-                              {client.displayName.length > 30 ? `${client.displayName.substring(0, 30)}...` : client.displayName}
+                    <SelectContent className="max-w-[400px]">
+                      {clients.map((client) => (
+                        <SelectItem key={client.id} value={client.displayName} className="text-left">
+                          <div className="flex items-center space-x-2 text-left w-full">
+                            <User className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate flex-1" title={client.displayName}>
+                              {client.displayName.length > 35 ? `${client.displayName.substring(0, 35)}...` : client.displayName}
                             </span>
+                            {client.count > 1 && (
+                              <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                {client.count}
+                              </span>
+                            )}
                           </div>
                         </SelectItem>
                       ))}
@@ -355,6 +365,45 @@ export default function AIConversationGenerator({ onConversationGenerated }: AIC
                     />
                   </div>
                 </div>
+                
+                <div className="flex justify-end mt-3">
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    onClick={() => {
+                      if (!customClientName.trim()) {
+                        toast.error('Please enter a client name')
+                        return
+                      }
+                      
+                      // Create display name for the new client
+                      const displayName = customClientEmail 
+                        ? `${customClientName} (${customClientEmail})`
+                        : customClientName
+                      
+                      // Add to clients list and select it
+                      const newClient = {
+                        id: `new-client-${Date.now()}`,
+                        name: customClientName,
+                        email: customClientEmail || null,
+                        displayName: displayName,
+                        count: 1
+                      }
+                      
+                      setClients(prev => [newClient, ...prev])
+                      setSelectedClient(displayName)
+                      setShowCustomClient(false)
+                      setCustomClientName('')
+                      setCustomClientEmail('')
+                      
+                      toast.success('Client saved successfully!')
+                    }}
+                    disabled={!customClientName.trim()}
+                  >
+                    Save Client
+                  </Button>
+                </div>
               </div>
             )}
           </div>
@@ -370,16 +419,16 @@ export default function AIConversationGenerator({ onConversationGenerated }: AIC
                     <SelectTrigger className="text-left w-full">
                       <SelectValue 
                         placeholder={loadingUsers ? "Loading hosts..." : "Select an existing host..."} 
-                        className="text-left"
+                        className="text-left truncate"
                       />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-w-[400px]">
                       {users.map((user) => (
                         <SelectItem key={user.id || `user-${user.email || user.name}`} value={user.displayName} className="text-left">
-                          <div className="flex items-center space-x-2 text-left">
-                            <User className="h-4 w-4" />
-                            <span className="truncate max-w-[200px]" title={user.displayName}>
-                              {user.displayName.length > 30 ? `${user.displayName.substring(0, 30)}...` : user.displayName}
+                          <div className="flex items-center space-x-2 text-left w-full">
+                            <User className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate flex-1" title={user.displayName}>
+                              {user.displayName.length > 35 ? `${user.displayName.substring(0, 35)}...` : user.displayName}
                             </span>
                           </div>
                         </SelectItem>
@@ -445,6 +494,44 @@ export default function AIConversationGenerator({ onConversationGenerated }: AIC
                       onChange={(e) => setCustomHostEmail(e.target.value)}
                     />
                   </div>
+                </div>
+                
+                <div className="flex justify-end mt-3">
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="sm"
+                    onClick={() => {
+                      if (!customHostName.trim()) {
+                        toast.error('Please enter a host name')
+                        return
+                      }
+                      
+                      // Create display name for the new host
+                      const displayName = customHostEmail 
+                        ? `${customHostName} (${customHostEmail})`
+                        : customHostName
+                      
+                      // Add to users list and select it
+                      const newUser = {
+                        id: `new-host-${Date.now()}`,
+                        name: customHostName,
+                        email: customHostEmail || null,
+                        displayName: displayName
+                      }
+                      
+                      setUsers(prev => [newUser, ...prev])
+                      setSelectedHost(displayName)
+                      setShowCustomHost(false)
+                      setCustomHostName('')
+                      setCustomHostEmail('')
+                      
+                      toast.success('Host saved successfully!')
+                    }}
+                    disabled={!customHostName.trim()}
+                  >
+                    Save Host
+                  </Button>
                 </div>
               </div>
             )}

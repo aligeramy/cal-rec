@@ -1,5 +1,5 @@
 import { AppSidebar } from "@/components/app-sidebar"
-import { SiteHeader } from "@/components/site-header"
+import { DynamicHeader } from "@/components/dynamic-header"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { getCurrentUser } from "@/lib/auth"
 
@@ -21,7 +21,7 @@ export default async function DashboardLayout({
     >
       <AppSidebar variant="inset" currentUser={currentUser} />
       <SidebarInset>
-        <SiteHeader />
+        <DynamicHeader />
         <div className="flex flex-1 flex-col p-4 lg:p-6">
           {children}
         </div>

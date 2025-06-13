@@ -100,17 +100,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <Link 
-          href="/dashboard/transcripts" 
-          className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors"
-        >
-          <FileText className="h-4 w-4 mr-2" />
-          View All Transcripts
-        </Link>
-      </div>
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -245,12 +234,14 @@ export default async function DashboardPage() {
                     <Badge 
                       variant={
                         transcript.status === 'completed' ? 'outline' :
-                        transcript.status === 'processing' ? 'secondary' :
+                        transcript.status === 'processing' ? 'outline' :
                         transcript.status === 'failed' ? 'destructive' : 'outline'
                       }
                       className={
                         transcript.status === 'completed' 
-                          ? 'bg-green-50 text-green-800 border-green-200 hover:bg-green-100 dark:bg-green-950 dark:text-green-200 dark:border-green-800 dark:hover:bg-green-900' 
+                          ? 'border-green-500 text-green-700 dark:border-green-400 dark:text-green-400' 
+                          : transcript.status === 'processing'
+                          ? 'border-blue-500 text-blue-700 dark:border-blue-400 dark:text-blue-400'
                           : ''
                       }
                     >

@@ -5,6 +5,8 @@ import { MeetingTranscript } from '@/lib/types'
 import { formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
 import { Loader2, Mail, Send, Edit, Save, X, FileText, User } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import {
   Tooltip,
   TooltipContent,
@@ -136,30 +138,30 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
       if (transcriptData?.utterances && Array.isArray(transcriptData.utterances)) {
         
         // If utterances don't have text, try to extract from main transcript
-        const hasTextInUtterances = transcriptData.utterances.some((u: { text?: string }) => u.text && u.text.trim())
+        const hasTextInUtterances = transcriptData.utterances.some((u: { text?: string; transcript?: string }) => (u.text && u.text.trim()) || (u.transcript && u.transcript.trim()))
         
         if (!hasTextInUtterances && transcript.transcript) {
           // Parse the main transcript to extract speaker segments  
           const textSegments = parseTranscriptText(transcript.transcript)
           
-          return transcriptData.utterances.map((utterance: { speaker: number; text: string; start?: number; end?: number }, index: number) => {
+          return transcriptData.utterances.map((utterance: { speaker: number; text?: string; transcript?: string; start?: number; end?: number }, index: number) => {
             const textSegment = textSegments[index] || { text: '', speaker: '' }
             return {
               id: index,
               speaker: utterance.speaker === 0 ? (clientName || 'Client') : (adminName || 'Host'),
               speakerId: utterance.speaker,
-              text: textSegment.text || '',
+              text: utterance.text || utterance.transcript || textSegment.text || '',
               start: utterance.start || 0,
               end: utterance.end || 0
             }
           })
         }
         
-        return transcriptData.utterances.map((utterance: { speaker: number; text: string; start?: number; end?: number }, index: number) => ({
+        return transcriptData.utterances.map((utterance: { speaker: number; text?: string; transcript?: string; start?: number; end?: number }, index: number) => ({
           id: index,
           speaker: utterance.speaker === 0 ? (clientName || 'Client') : (adminName || 'Host'),
           speakerId: utterance.speaker,
-          text: utterance.text || '',
+          text: utterance.text || utterance.transcript || '',
           start: utterance.start || 0,
           end: utterance.end || 0
         }))
@@ -344,7 +346,7 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
               className={`inline-flex items-center text-xs px-3 py-1.5 rounded-md transition-colors ${
                 viewMode === 'speaker' 
                   ? 'bg-primary text-primary-foreground' 
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                  : 'bg-transparent text-primary border border-border hover:bg-secondary/30'
               }`}
             >
               Speaker View
@@ -354,7 +356,7 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
               className={`inline-flex items-center text-xs px-3 py-1.5 rounded-md transition-colors ${
                 viewMode === 'full' 
                   ? 'bg-primary text-primary-foreground' 
-                  : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+                  : 'bg-transparent text-primary border border-border hover:bg-secondary/30'
               }`}
             >
               Full View
@@ -381,7 +383,7 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
         {!isEditing ? (
           <button
             onClick={() => setEditing(true)}
-            className="inline-flex items-center text-xs px-3 py-1.5 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+            className="inline-flex items-center text-xs px-3 py-1.5 rounded-md border border-border bg-background hover:bg-muted/50 transition-colors"
           >
             <Edit className="h-3 w-3 mr-1" />
             Edit
@@ -402,7 +404,7 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
             </button>
             <button
               onClick={() => setEditing(false)}
-              className="inline-flex items-center text-xs px-3 py-1.5 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
+              className="inline-flex items-center text-xs px-3 py-1.5 rounded-md border border-border bg-background hover:bg-muted/50 transition-colors"
             >
               <X className="h-3 w-3 mr-1" />
               Cancel
@@ -414,57 +416,84 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
   )
   
   return (
-    <div className="space-y-6">
-      <div className="flex justify-end items-center">
-        {/* Send PDF Buttons */}
-        <div className="flex space-x-2">
-          {clientEmail && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => sendEmail('client')}
-                    disabled={sendingToClient}
-                    className="inline-flex items-center text-sm px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                  >
-                    {sendingToClient ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Mail className="h-4 w-4 mr-2" />
-                    )}
-                    Send PDF to Client
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Send transcript PDF to {clientName || clientEmail}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
+    <div className="p-6 space-y-6">
+      {/* PDF Toolbar */}
+      <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <FileText className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+            <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">PDF Actions</h3>
+          </div>
           
-          {adminEmail && (
+          <div className="flex items-center space-x-2">
+            {/* View PDF Button */}
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    onClick={() => sendEmail('admin')}
-                    disabled={sendingToAdmin}
-                    className="inline-flex items-center text-sm px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 transition-colors"
+                    onClick={() => window.open(`/api/transcripts/${transcript.id}/pdf`, '_blank')}
+                    className="inline-flex items-center text-sm px-3 py-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                   >
-                    {sendingToAdmin ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : (
-                      <Send className="h-4 w-4 mr-2" />
-                    )}
-                    Send PDF to Admin
+                    <FileText className="h-4 w-4 mr-2" />
+                    View PDF
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Send transcript PDF to {adminName || adminEmail}</p>
+                  <p>Open comprehensive PDF with all views</p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-          )}
+
+            {/* Send to Client */}
+            {clientEmail && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => sendEmail('client')}
+                      disabled={sendingToClient}
+                      className="inline-flex items-center text-sm px-3 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                    >
+                      {sendingToClient ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Mail className="h-4 w-4 mr-2" />
+                      )}
+                      Send to Client
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Send PDF to {clientName || clientEmail}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            
+            {/* Send to Admin */}
+            {adminEmail && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => sendEmail('admin')}
+                      disabled={sendingToAdmin}
+                      className="inline-flex items-center text-sm px-3 py-2 rounded-md border border-blue-600 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50 transition-colors"
+                    >
+                      {sendingToAdmin ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Send className="h-4 w-4 mr-2" />
+                      )}
+                      Send to Admin
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Send PDF to {adminName || adminEmail}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
         </div>
       </div>
       
@@ -550,49 +579,6 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
               <span className="block text-sm font-medium text-muted-foreground">Duration</span>
               <span className="text-sm text-foreground">{transcript.duration ? `${transcript.duration} minutes` : 'Not specified'}</span>
             </div>
-          </div>
-        )}
-      </div>
-      
-      {/* Notes Section */}
-      <div className="border-t border-border pt-6">
-        {renderSectionHeader(
-          "Meeting Notes", 
-          isEditingNotes, 
-          setIsEditingNotes,
-          () => saveEdits('notes'),
-          true
-        )}
-        
-        {isEditingNotes ? (
-          <div className="space-y-3">
-            <textarea
-              value={editedNotes}
-              onChange={(e) => setEditedNotes(e.target.value)}
-              className="w-full min-h-[200px] p-4 bg-muted rounded-lg border border-border resize-y focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-              placeholder="Enter meeting notes or click 'Generate Notes' to create notes automatically from the transcript..."
-            />
-            {!transcript.notes && !editedNotes && (
-              <p className="text-sm text-muted-foreground">
-                💡 Tip: Click &quot;Generate Notes&quot; to automatically create professional meeting notes based on the transcript content.
-              </p>
-            )}
-          </div>
-        ) : transcript.notes ? (
-          <div className="bg-muted/50 rounded-lg p-4 text-sm whitespace-pre-wrap border">
-            {transcript.notes}
-          </div>
-        ) : (
-          <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground border text-center">
-            <p>No meeting notes available.</p>
-            <p className="mt-2">
-              <button
-                onClick={() => setIsEditingNotes(true)}
-                className="text-primary hover:underline"
-              >
-                Click here to add notes
-              </button>
-            </p>
           </div>
         )}
       </div>
@@ -694,6 +680,53 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
         ) : (
           <div className="bg-muted/50 rounded-lg p-6 text-sm text-muted-foreground border">
             Transcript is pending processing.
+          </div>
+        )}
+      </div>
+      
+      {/* Notes Section */}
+      <div className="border-t border-border pt-6">
+        {renderSectionHeader(
+          "Meeting Notes", 
+          isEditingNotes, 
+          setIsEditingNotes,
+          () => saveEdits('notes'),
+          true
+        )}
+        
+        {isEditingNotes ? (
+          <div className="space-y-3">
+            <textarea
+              value={editedNotes}
+              onChange={(e) => setEditedNotes(e.target.value)}
+              className="w-full min-h-[200px] max-h-[400px] p-4 bg-muted rounded-lg border border-border resize-y focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              placeholder="Enter meeting notes in Markdown format or click 'Generate Notes' to create notes automatically from the transcript..."
+            />
+            {!transcript.notes && !editedNotes && (
+              <p className="text-sm text-muted-foreground">
+                💡 Tip: Click &quot;Generate Notes&quot; to automatically create professional meeting notes in Markdown format based on the transcript content.
+              </p>
+            )}
+          </div>
+        ) : transcript.notes ? (
+          <div className="bg-muted/50 rounded-lg border max-h-[500px] overflow-y-auto">
+            <div className="p-4 text-sm markdown-content">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {transcript.notes}
+              </ReactMarkdown>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-muted/50 rounded-lg p-4 text-sm text-muted-foreground border text-center">
+            <p>No meeting notes available.</p>
+            <p className="mt-2">
+              <button
+                onClick={() => setIsEditingNotes(true)}
+                className="text-primary hover:underline"
+              >
+                Click here to add notes
+              </button>
+            </p>
           </div>
         )}
       </div>

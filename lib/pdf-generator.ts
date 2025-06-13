@@ -3,6 +3,128 @@ import puppeteerCore from 'puppeteer-core';
 import { MeetingTranscript } from '@/lib/types';
 import { formatDate } from '@/lib/utils';
 
+// Parse transcript JSON for speaker view
+interface SpeakerUtterance {
+  id: number;
+  speaker: string;
+  speakerId: number;
+  text: string;
+  start: number;
+  end: number;
+}
+
+function parseTranscriptForSpeakers(transcript: MeetingTranscript): SpeakerUtterance[] {
+  try {
+    if (!transcript.transcriptJson) {
+      return [];
+    }
+    
+    const transcriptData = typeof transcript.transcriptJson === 'string' 
+      ? JSON.parse(transcript.transcriptJson) 
+      : transcript.transcriptJson;
+
+    const clientName = transcript.clientName || 'Client';
+    const hostName = transcript.hostName || 'Host';
+
+    if (transcriptData?.utterances && Array.isArray(transcriptData.utterances)) {
+      return transcriptData.utterances.map((utterance: { speaker: number; text?: string; transcript?: string; start?: number; end?: number }, index: number) => ({
+        id: index,
+        speaker: utterance.speaker === 0 ? clientName : hostName,
+        speakerId: utterance.speaker,
+        text: utterance.text || utterance.transcript || '',
+        start: utterance.start || 0,
+        end: utterance.end || 0
+      }));
+    }
+
+    return [];
+  } catch (error) {
+    console.error('Error parsing transcript JSON for PDF:', error);
+    return [];
+  }
+}
+
+// Simple markdown to HTML converter for PDF generation
+function markdownToHtml(markdown: string): string {
+  if (!markdown) return '';
+  
+  let html = markdown
+    // Headers
+    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+    // Bold
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    // Italic
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    // Code
+    .replace(/`(.*?)`/g, '<code>$1</code>')
+    // Line breaks
+    .replace(/\n\n/g, '</p><p>')
+    // Lists
+    .replace(/^\- (.*$)/gim, '<li>$1</li>')
+    .replace(/(<li>[\s\S]*<\/li>)/, '<ul>$1</ul>')
+    .replace(/<\/li>\s*<li>/g, '</li><li>');
+  
+  // Wrap in paragraphs if not already wrapped
+  if (!html.includes('<h1>') && !html.includes('<h2>') && !html.includes('<h3>') && !html.includes('<ul>')) {
+    html = '<p>' + html + '</p>';
+  }
+  
+  return html;
+}
+
+// Generate speaker view HTML for PDF with 2-column layout
+function generateSpeakerView(transcript: MeetingTranscript): string {
+  const speakerUtterances = parseTranscriptForSpeakers(transcript);
+  
+  if (speakerUtterances.length === 0) {
+    return '<div class="transcript-content">No speaker data available.</div>';
+  }
+  
+  // Split utterances into two columns
+  const midpoint = Math.ceil(speakerUtterances.length / 2);
+  const leftColumn = speakerUtterances.slice(0, midpoint);
+  const rightColumn = speakerUtterances.slice(midpoint);
+  
+  const generateColumn = (utterances: typeof speakerUtterances) => {
+    return utterances.map(utterance => {
+      const isClient = utterance.speakerId === 0;
+      const minutes = Math.floor(utterance.start / 60);
+      const seconds = Math.floor(utterance.start % 60);
+      const timeStamp = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      
+      return `
+        <div class="speaker-message">
+          <div class="speaker-avatar ${isClient ? 'client-avatar' : 'host-avatar'}">
+            ${utterance.speaker.charAt(0).toUpperCase()}
+          </div>
+          <div class="speaker-content">
+            <div class="speaker-name">
+              ${utterance.speaker}
+              <span class="speaker-time">${timeStamp}</span>
+            </div>
+            <div class="speaker-text ${isClient ? 'client-text' : 'host-text'}">
+              ${utterance.text}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  };
+  
+  return `
+    <div class="speaker-conversation">
+      <div class="speaker-column">
+        ${generateColumn(leftColumn)}
+      </div>
+      <div class="speaker-column">
+        ${generateColumn(rightColumn)}
+      </div>
+    </div>
+  `;
+}
+
 // Import chromium for serverless environments
 let chromium: {
   args: string[];
@@ -104,13 +226,13 @@ export async function generateTranscriptPDF(
       printBackground: true,
       displayHeaderFooter: true,
       headerTemplate: `
-        <div style="font-size: 10px; color: #666; width: 100%; text-align: center; margin-top: 0.5in;">
-          <span>Meeting Transcript - ${transcript.title || 'Untitled Meeting'}</span>
+        <div style="font-family: Arial, sans-serif; font-size: 9px; color: #999; width: 100%; text-align: center; margin-top: 0.3in;">
+          <span>${transcript.title || 'Meeting Transcript'}</span>
         </div>
       `,
       footerTemplate: `
-        <div style="font-size: 10px; color: #666; width: 100%; text-align: center; margin-bottom: 0.5in;">
-          <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span> | Generated on ${footerDate}</span>
+        <div style="font-family: Arial, sans-serif; font-size: 9px; color: #999; width: 100%; text-align: center; margin-bottom: 0.3in;">
+          <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span> | ${footerDate}</span>
         </div>
       `
     });
@@ -254,7 +376,7 @@ function generatePDFHTML(
             background-color: #fafafa;
             padding: 20px;
             border-radius: 8px;
-            border-left: 4px solid #1a56db;
+            border: 1px solid #e0e0e0;
           }
           
           .transcript-content {
@@ -263,9 +385,141 @@ function generatePDFHTML(
             font-size: 11px;
           }
           
+          /* Speaker view styles */
+          .speaker-conversation {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+          }
+          
+          .speaker-column {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+          }
+          
+          .speaker-message {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 8px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          
+          .speaker-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            margin-right: 10px;
+            flex-shrink: 0;
+          }
+          
+          .client-avatar {
+            background-color: #3b82f6;
+          }
+          
+          .host-avatar {
+            background-color: #10b981;
+          }
+          
+          .speaker-content {
+            flex: 1;
+            min-width: 0;
+          }
+          
+          .speaker-name {
+            font-size: 10px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 2px;
+          }
+          
+          .speaker-time {
+            font-size: 9px;
+            color: #6b7280;
+            margin-left: 8px;
+          }
+          
+          .speaker-text {
+            background-color: #f9fafb;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 11px;
+            line-height: 1.5;
+            color: #374151;
+            border: 1px solid #e5e7eb;
+          }
+          
+          .client-text {
+            background-color: #eff6ff;
+            border-color: #dbeafe;
+          }
+          
+          .host-text {
+            background-color: #f0fdf4;
+            border-color: #dcfce7;
+          }
+          
           .notes-content {
-            white-space: pre-wrap;
             line-height: 1.7;
+          }
+          
+          /* Markdown styles for notes */
+          .notes-content h1 {
+            font-size: 16px;
+            font-weight: bold;
+            margin: 16px 0 8px 0;
+            color: #1a56db;
+          }
+          
+          .notes-content h2 {
+            font-size: 14px;
+            font-weight: bold;
+            margin: 14px 0 6px 0;
+            color: #333;
+          }
+          
+          .notes-content h3 {
+            font-size: 12px;
+            font-weight: bold;
+            margin: 12px 0 4px 0;
+            color: #333;
+          }
+          
+          .notes-content p {
+            margin: 8px 0;
+          }
+          
+          .notes-content ul, .notes-content ol {
+            margin: 8px 0;
+            padding-left: 20px;
+          }
+          
+          .notes-content li {
+            margin: 4px 0;
+          }
+          
+          .notes-content strong {
+            font-weight: bold;
+          }
+          
+          .notes-content em {
+            font-style: italic;
+          }
+          
+          .notes-content code {
+            background-color: #f5f5f5;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
           }
           
           .recipient-info {
@@ -370,15 +624,23 @@ function generatePDFHTML(
           <div class="section">
             <div class="section-title">Meeting Notes</div>
             <div class="content-box">
-              <div class="notes-content">${transcript.notes}</div>
+              <div class="notes-content">${markdownToHtml(transcript.notes)}</div>
             </div>
           </div>
           ` : ''}
           
           ${includeTranscript && transcript.transcript ? `
-          <!-- Full Transcript Section -->
+          <!-- Conversation View Section -->
           <div class="section ${includeNotes && transcript.notes ? 'page-break' : ''}">
-            <div class="section-title">Full Transcript</div>
+            <div class="section-title">Conversation Overview</div>
+            <div class="content-box">
+              ${generateSpeakerView(transcript)}
+            </div>
+          </div>
+          
+          <!-- Full Transcript Section -->
+          <div class="section page-break">
+            <div class="section-title">Complete Transcript</div>
             <div class="content-box">
               <div class="transcript-content">${transcript.transcript}</div>
             </div>
