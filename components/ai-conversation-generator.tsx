@@ -272,8 +272,8 @@ export default function AIConversationGenerator({ onConversationGenerated }: AIC
                       />
                     </SelectTrigger>
                     <SelectContent>
-                      {clients.map((client) => (
-                        <SelectItem key={client.displayName} value={client.displayName} className="text-left">
+                      {clients.map((client, index) => (
+                        <SelectItem key={`client-${client.email || client.name}-${index}`} value={client.displayName} className="text-left">
                           <div className="flex items-center space-x-2 text-left">
                             <User className="h-4 w-4" />
                             <span className="truncate max-w-[200px]" title={client.displayName}>
@@ -360,7 +360,7 @@ export default function AIConversationGenerator({ onConversationGenerated }: AIC
               </SelectTrigger>
               <SelectContent>
                 {users.map((user) => (
-                  <SelectItem key={user.displayName} value={user.displayName} className="text-left">
+                  <SelectItem key={user.id || `user-${user.email || user.name}`} value={user.displayName} className="text-left">
                     <div className="flex items-center space-x-2 text-left">
                       <User className="h-4 w-4" />
                       <span className="truncate max-w-[200px]" title={user.displayName}>

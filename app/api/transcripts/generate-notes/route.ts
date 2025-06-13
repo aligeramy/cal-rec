@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log('🤖 Generating AI notes for transcript:', transcriptId);
+    console.log('📝 Generating notes for transcript:', transcriptId);
 
     // Generate notes using OpenAI
     const completion = await openai.chat.completions.create({
@@ -83,10 +83,10 @@ ${transcript.transcript}`
     const generatedNotes = completion.choices[0]?.message?.content;
 
     if (!generatedNotes) {
-      throw new Error('Failed to generate notes from OpenAI');
+      throw new Error('Failed to generate notes');
     }
 
-    console.log('✅ AI notes generated successfully');
+    console.log('✅ Notes generated successfully');
 
     return NextResponse.json({
       success: true,
@@ -94,7 +94,7 @@ ${transcript.transcript}`
     });
 
   } catch (error) {
-    console.error('❌ Error generating AI notes:', error);
+    console.error('❌ Error generating notes:', error);
     return NextResponse.json(
       { 
         error: 'Failed to generate notes',

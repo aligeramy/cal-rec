@@ -12,7 +12,17 @@ export async function POST(req: Request) {
     }
 
     // Parse request body
-    const { id, transcript, notes, meetingType } = await req.json();
+    const { 
+      id, 
+      transcript, 
+      notes, 
+      meetingType,
+      hostName,
+      hostEmail,
+      startTime,
+      endTime,
+      duration
+    } = await req.json();
 
     // Validate required fields
     if (!id) {
@@ -40,6 +50,11 @@ export async function POST(req: Request) {
       transcript?: string;
       notes?: string;
       meetingType?: string;
+      hostName?: string;
+      hostEmail?: string;
+      startTime?: Date;
+      endTime?: Date;
+      duration?: number;
     } = {
       updatedAt: new Date(),
     };
@@ -114,6 +129,26 @@ export async function POST(req: Request) {
 
     if (meetingType !== undefined) {
       updateData.meetingType = meetingType;
+    }
+
+    if (hostName !== undefined) {
+      updateData.hostName = hostName;
+    }
+
+    if (hostEmail !== undefined) {
+      updateData.hostEmail = hostEmail;
+    }
+
+    if (startTime !== undefined) {
+      updateData.startTime = startTime ? new Date(startTime) : null;
+    }
+
+    if (endTime !== undefined) {
+      updateData.endTime = endTime ? new Date(endTime) : null;
+    }
+
+    if (duration !== undefined) {
+      updateData.duration = duration ? parseInt(duration.toString()) : null;
     }
 
     // Update the transcript in the database
