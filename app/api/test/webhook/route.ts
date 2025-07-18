@@ -11,7 +11,7 @@ export async function GET() {
     );
   }
   
-  // Create a sample booking created event
+  // Create a sample booking created events
   const bookingCreatedPayload = {
     triggerEvent: "BOOKING_CREATED",
     bookingUid: `test-${Date.now()}`,
