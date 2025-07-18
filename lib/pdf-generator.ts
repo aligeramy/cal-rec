@@ -74,55 +74,163 @@ function markdownToHtml(markdown: string): string {
   return html;
 }
 
-// Generate speaker view HTML for PDF with 2-column layout
-function generateSpeakerView(transcript: MeetingTranscript): string {
+// Template 1: Speaker View + Full Transcript in Meeting Info
+function generateTemplate1(transcript: MeetingTranscript): { conversationContent: string; includeFullTranscript: boolean; includeFullInMeetingInfo: boolean } {
   const speakerUtterances = parseTranscriptForSpeakers(transcript);
   
   if (speakerUtterances.length === 0) {
-    return '<div class="transcript-content">No speaker data available.</div>';
+    return {
+      conversationContent: '<div class="transcript-content">No speaker data available.</div>',
+      includeFullTranscript: false,
+      includeFullInMeetingInfo: false
+    };
   }
   
-  // Split utterances into two columns
-  const midpoint = Math.ceil(speakerUtterances.length / 2);
-  const leftColumn = speakerUtterances.slice(0, midpoint);
-  const rightColumn = speakerUtterances.slice(midpoint);
-  
-  const generateColumn = (utterances: typeof speakerUtterances) => {
-    return utterances.map(utterance => {
-      const isClient = utterance.speakerId === 0;
-      const minutes = Math.floor(utterance.start / 60);
-      const seconds = Math.floor(utterance.start % 60);
-      const timeStamp = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-      
-      return `
-        <div class="speaker-message">
-          <div class="speaker-avatar ${isClient ? 'client-avatar' : 'host-avatar'}">
-            ${utterance.speaker.charAt(0).toUpperCase()}
-          </div>
-          <div class="speaker-content">
-            <div class="speaker-name">
-              ${utterance.speaker}
-              <span class="speaker-time">${timeStamp}</span>
+  const conversationContent = `
+    <div class="template-1-conversation">
+      ${speakerUtterances.map(utterance => {
+        const minutes = Math.floor(utterance.start / 60);
+        const seconds = Math.floor(utterance.start % 60);
+        const timeStamp = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        return `
+          <div class="conversation-entry">
+            <div class="speaker-header">
+              <strong class="speaker-name">${utterance.speaker}</strong>
+              <span class="timestamp">[${timeStamp}]</span>
             </div>
-            <div class="speaker-text ${isClient ? 'client-text' : 'host-text'}">
-              ${utterance.text}
-            </div>
+            <div class="speaker-message">${utterance.text}</div>
           </div>
-        </div>
-      `;
-    }).join('');
-  };
-  
-  return `
-    <div class="speaker-conversation">
-      <div class="speaker-column">
-        ${generateColumn(leftColumn)}
-      </div>
-      <div class="speaker-column">
-        ${generateColumn(rightColumn)}
-      </div>
+        `;
+      }).join('')}
     </div>
   `;
+  
+  return {
+    conversationContent,
+    includeFullTranscript: false, // Don't include separate full transcript section
+    includeFullInMeetingInfo: true // Include full transcript in meeting info section
+  };
+}
+
+// Template 2: Full Transcript Only - Raw transcript with one speaker bolded
+function generateTemplate2(transcript: MeetingTranscript): { conversationContent: string; includeFullTranscript: boolean; includeFullInMeetingInfo: boolean } {
+  if (!transcript.transcript) {
+    return {
+      conversationContent: '<div class="transcript-content">No transcript available.</div>',
+      includeFullTranscript: false,
+      includeFullInMeetingInfo: false
+    };
+  }
+  
+  // Process the transcript to bold one speaker (client by default)
+  const clientName = transcript.clientName || 'Client';
+  
+  // Bold the client's name throughout the transcript
+  const processedTranscript = transcript.transcript
+    .replace(new RegExp(`^${clientName}:`, 'gm'), `<strong>${clientName}:</strong>`)
+    .replace(new RegExp(`\\n${clientName}:`, 'g'), `\n<strong>${clientName}:</strong>`);
+  
+  const conversationContent = `
+    <div class="template-2-full-transcript">
+      <div class="full-transcript-content">${processedTranscript}</div>
+    </div>
+  `;
+  
+  return {
+    conversationContent,
+    includeFullTranscript: false, // We're showing the processed version, not the raw one
+    includeFullInMeetingInfo: false
+  };
+}
+
+// Template 3: Full Transcript on Top + Speaker View Below
+function generateTemplate3(transcript: MeetingTranscript): { conversationContent: string; includeFullTranscript: boolean; includeFullInMeetingInfo: boolean } {
+  const speakerUtterances = parseTranscriptForSpeakers(transcript);
+  
+  if (speakerUtterances.length === 0) {
+    return {
+      conversationContent: '<div class="transcript-content">No speaker data available.</div>',
+      includeFullTranscript: true, // Will show full transcript in separate section
+      includeFullInMeetingInfo: false
+    };
+  }
+  
+  const conversationContent = `
+    <div class="template-3-conversation">
+      <div class="section-subtitle">Speaker-by-Speaker Breakdown</div>
+      ${speakerUtterances.map(utterance => {
+        const minutes = Math.floor(utterance.start / 60);
+        const seconds = Math.floor(utterance.start % 60);
+        const timeStamp = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        return `
+          <div class="breakdown-entry">
+            <div class="breakdown-header">
+              <span class="breakdown-speaker">${utterance.speaker}</span>
+              <span class="breakdown-time">${timeStamp}</span>
+            </div>
+            <div class="breakdown-content">${utterance.text}</div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+  
+  return {
+    conversationContent,
+    includeFullTranscript: true, // This template shows BOTH full transcript AND speaker breakdown
+    includeFullInMeetingInfo: false
+  };
+}
+
+// Template 4: Executive Summary - Key points only with speaker highlights
+function generateTemplate4(transcript: MeetingTranscript): { conversationContent: string; includeFullTranscript: boolean; includeFullInMeetingInfo: boolean } {
+  const speakerUtterances = parseTranscriptForSpeakers(transcript);
+  
+  if (speakerUtterances.length === 0) {
+    return {
+      conversationContent: '<div class="transcript-content">No speaker data available.</div>',
+      includeFullTranscript: false,
+      includeFullInMeetingInfo: false
+    };
+  }
+  
+  // Filter to longer utterances (likely more important points)
+  const keyPoints = speakerUtterances.filter(utterance => utterance.text.length > 100);
+  const pointsToShow = keyPoints.length > 0 ? keyPoints : speakerUtterances.slice(0, Math.min(10, speakerUtterances.length));
+  
+  const conversationContent = `
+    <div class="template-4-executive">
+      <div class="executive-note">
+        <em>This executive summary shows key discussion points from the meeting.</em>
+      </div>
+      ${pointsToShow.map((utterance, index) => {
+        const minutes = Math.floor(utterance.start / 60);
+        const seconds = Math.floor(utterance.start % 60);
+        const timeStamp = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        return `
+          <div class="executive-point">
+            <div class="point-number">${index + 1}</div>
+            <div class="point-content">
+              <div class="point-header">
+                <strong class="point-speaker">${utterance.speaker}</strong>
+                <span class="point-time">${timeStamp}</span>
+              </div>
+              <div class="point-text">${utterance.text}</div>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+  
+  return {
+    conversationContent,
+    includeFullTranscript: false, // Executive summary only, no full transcript
+    includeFullInMeetingInfo: false
+  };
 }
 
 // Import chromium for serverless environments
@@ -146,6 +254,7 @@ export interface PDFGenerationOptions {
   includeMetadata?: boolean;
   recipientName?: string;
   recipientType?: 'client' | 'admin';
+  template?: 1 | 2 | 3 | 4;
 }
 
 export async function generateTranscriptPDF(
@@ -157,7 +266,8 @@ export async function generateTranscriptPDF(
     includeTranscript = true,
     includeMetadata = true,
     recipientName,
-    recipientType = 'client'
+    recipientType = 'client',
+    template = 1
   } = options;
 
   // Generate HTML content for the PDF
@@ -166,7 +276,8 @@ export async function generateTranscriptPDF(
     includeTranscript,
     includeMetadata,
     recipientName,
-    recipientType
+    recipientType,
+    template
   });
 
   let browser;
@@ -257,13 +368,56 @@ function generatePDFHTML(
     includeTranscript,
     includeMetadata,
     recipientName,
-    recipientType
+    recipientType,
+    template = 1
   } = options;
 
   const startTime = transcript.startTime ? formatDate(transcript.startTime) : 'N/A';
   const endTime = transcript.endTime ? formatDate(transcript.endTime) : 'N/A';
   const duration = transcript.duration ? `${transcript.duration} minutes` : 'N/A';
   const meetingTitle = transcript.title || 'Untitled Meeting';
+
+  // Generate conversation content based on template
+  let conversationContent = '';
+  let includeFullTranscript = true;
+  let includeFullInMeetingInfo = false;
+  
+  switch (template) {
+    case 1: {
+      const result = generateTemplate1(transcript);
+      conversationContent = result.conversationContent;
+      includeFullTranscript = result.includeFullTranscript;
+      includeFullInMeetingInfo = result.includeFullInMeetingInfo;
+      break;
+    }
+    case 2: {
+      const result = generateTemplate2(transcript);
+      conversationContent = result.conversationContent;
+      includeFullTranscript = result.includeFullTranscript;
+      includeFullInMeetingInfo = result.includeFullInMeetingInfo;
+      break;
+    }
+    case 3: {
+      const result = generateTemplate3(transcript);
+      conversationContent = result.conversationContent;
+      includeFullTranscript = result.includeFullTranscript;
+      includeFullInMeetingInfo = result.includeFullInMeetingInfo;
+      break;
+    }
+    case 4: {
+      const result = generateTemplate4(transcript);
+      conversationContent = result.conversationContent;
+      includeFullTranscript = result.includeFullTranscript;
+      includeFullInMeetingInfo = result.includeFullInMeetingInfo;
+      break;
+    }
+    default: {
+      const result = generateTemplate1(transcript);
+      conversationContent = result.conversationContent;
+      includeFullTranscript = result.includeFullTranscript;
+      includeFullInMeetingInfo = result.includeFullInMeetingInfo;
+    }
+  }
 
   return `
     <!DOCTYPE html>
@@ -385,86 +539,157 @@ function generatePDFHTML(
             font-size: 11px;
           }
           
-          /* Speaker view styles */
-          .speaker-conversation {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
+          /* Template 1: Clean Conversation Flow */
+          .template-1-conversation .conversation-entry {
             margin-bottom: 20px;
-          }
-          
-          .speaker-column {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-          }
-          
-          .speaker-message {
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 8px;
             page-break-inside: avoid;
-            break-inside: avoid;
           }
           
-          .speaker-avatar {
-            width: 28px;
-            height: 28px;
+          .template-1-conversation .speaker-header {
+            margin-bottom: 8px;
+          }
+          
+          .template-1-conversation .speaker-name {
+            font-size: 13px;
+            font-weight: bold;
+            color: #1a56db;
+          }
+          
+          .template-1-conversation .timestamp {
+            font-size: 10px;
+            color: #666;
+            margin-left: 10px;
+          }
+          
+          .template-1-conversation .speaker-message {
+            font-size: 11px;
+            line-height: 1.6;
+            color: #333;
+            padding-left: 15px;
+            border-left: 3px solid #e0e0e0;
+            padding-top: 5px;
+            padding-bottom: 5px;
+          }
+          
+          /* Template 2: Full Transcript Only */
+          .template-2-full-transcript .full-transcript-content {
+            white-space: pre-wrap;
+            line-height: 1.8;
+            font-size: 11px;
+            color: #333;
+          }
+          
+          .template-2-full-transcript .full-transcript-content strong {
+            color: #1a56db;
+            font-weight: bold;
+          }
+          
+          /* Template 3: Full Transcript + Speaker Breakdown */
+          .template-3-conversation .section-subtitle {
+            font-size: 14px;
+            font-weight: bold;
+            color: #1a56db;
+            margin-bottom: 20px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e0e0e0;
+          }
+          
+          .template-3-conversation .breakdown-entry {
+            margin-bottom: 18px;
+            padding: 12px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            border-left: 3px solid #1a56db;
+            page-break-inside: avoid;
+          }
+          
+          .template-3-conversation .breakdown-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+          }
+          
+          .template-3-conversation .breakdown-speaker {
+            font-size: 12px;
+            font-weight: bold;
+            color: #1a56db;
+          }
+          
+          .template-3-conversation .breakdown-time {
+            font-size: 10px;
+            color: #666;
+            background-color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+          }
+          
+          .template-3-conversation .breakdown-content {
+            font-size: 11px;
+            line-height: 1.6;
+            color: #333;
+          }
+          
+          /* Template 4: Executive Summary */
+          .template-4-executive .executive-note {
+            background-color: #e3f2fd;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 25px;
+            font-size: 11px;
+            color: #1565c0;
+            text-align: center;
+          }
+          
+          .template-4-executive .executive-point {
+            display: flex;
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+          }
+          
+          .template-4-executive .point-number {
+            width: 30px;
+            height: 30px;
+            background-color: #1a56db;
+            color: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 10px;
+            font-size: 12px;
             font-weight: bold;
-            color: white;
-            margin-right: 10px;
+            margin-right: 15px;
             flex-shrink: 0;
           }
           
-          .client-avatar {
-            background-color: #3b82f6;
-          }
-          
-          .host-avatar {
-            background-color: #10b981;
-          }
-          
-          .speaker-content {
+          .template-4-executive .point-content {
             flex: 1;
-            min-width: 0;
           }
           
-          .speaker-name {
+          .template-4-executive .point-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+          }
+          
+          .template-4-executive .point-speaker {
+            font-size: 12px;
+            color: #1a56db;
+          }
+          
+          .template-4-executive .point-time {
             font-size: 10px;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 2px;
+            color: #666;
+            background-color: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
           }
           
-          .speaker-time {
-            font-size: 9px;
-            color: #6b7280;
-            margin-left: 8px;
-          }
-          
-          .speaker-text {
-            background-color: #f9fafb;
-            padding: 8px 12px;
-            border-radius: 8px;
+          .template-4-executive .point-text {
             font-size: 11px;
-            line-height: 1.5;
-            color: #374151;
-            border: 1px solid #e5e7eb;
-          }
-          
-          .client-text {
-            background-color: #eff6ff;
-            border-color: #dbeafe;
-          }
-          
-          .host-text {
-            background-color: #f0fdf4;
-            border-color: #dcfce7;
+            line-height: 1.6;
+            color: #333;
           }
           
           .notes-content {
@@ -616,6 +841,14 @@ function generatePDFHTML(
                 </div>
               </div>
             </div>
+            
+            ${includeFullInMeetingInfo && transcript.transcript ? `
+            <!-- Full Transcript in Meeting Info -->
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+              <div style="font-size: 14px; font-weight: bold; color: #1a56db; margin-bottom: 10px;">Complete Transcript</div>
+              <div class="transcript-content" style="background-color: #fafafa; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0;">${transcript.transcript}</div>
+            </div>
+            ` : ''}
           </div>
           ` : ''}
           
@@ -630,14 +863,15 @@ function generatePDFHTML(
           ` : ''}
           
           ${includeTranscript && transcript.transcript ? `
-          <!-- Conversation View Section -->
+          <!-- Conversation Section -->
           <div class="section ${includeNotes && transcript.notes ? 'page-break' : ''}">
-            <div class="section-title">Conversation Overview</div>
+            <div class="section-title">Meeting Conversation</div>
             <div class="content-box">
-              ${generateSpeakerView(transcript)}
+              ${conversationContent}
             </div>
           </div>
           
+          ${includeFullTranscript ? `
           <!-- Full Transcript Section -->
           <div class="section page-break">
             <div class="section-title">Complete Transcript</div>
@@ -645,6 +879,7 @@ function generatePDFHTML(
               <div class="transcript-content">${transcript.transcript}</div>
             </div>
           </div>
+          ` : ''}
           ` : ''}
           
           <!-- Status Section -->

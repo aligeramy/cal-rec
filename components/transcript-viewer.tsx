@@ -419,31 +419,13 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
     <div className="p-6 space-y-6">
       {/* PDF Toolbar */}
       <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
             <FileText className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-            <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">PDF Actions</h3>
+            <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100">PDF Templates</h3>
           </div>
           
           <div className="flex items-center space-x-2">
-            {/* View PDF Button */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => window.open(`/api/transcripts/${transcript.id}/pdf`, '_blank')}
-                    className="inline-flex items-center text-sm px-3 py-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    View PDF
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Open comprehensive PDF with all views</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-
             {/* Send to Client */}
             {clientEmail && (
               <TooltipProvider>
@@ -494,6 +476,73 @@ export default function TranscriptViewer({ transcript: initialTranscript }: Tran
               </TooltipProvider>
             )}
           </div>
+        </div>
+        
+        {/* Template Selection Buttons */}
+        <div className="grid grid-cols-4 gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => window.open(`/api/transcripts/${transcript.id}/pdf?template=1`, '_blank')}
+                  className="inline-flex items-center justify-center text-sm px-3 py-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  1
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p><strong>Speaker View + Full</strong><br/>Clean conversation format + complete transcript</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => window.open(`/api/transcripts/${transcript.id}/pdf?template=2`, '_blank')}
+                  className="inline-flex items-center justify-center text-sm px-3 py-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  2
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p><strong>Full Transcript Only</strong><br/>Raw transcript with client name bolded</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => window.open(`/api/transcripts/${transcript.id}/pdf?template=3`, '_blank')}
+                  className="inline-flex items-center justify-center text-sm px-3 py-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  3
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p><strong>Full + Speaker View</strong><br/>Complete transcript + speaker breakdown</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => window.open(`/api/transcripts/${transcript.id}/pdf?template=4`, '_blank')}
+                  className="inline-flex items-center justify-center text-sm px-3 py-2 rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  4
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p><strong>Executive Summary</strong><br/>Key discussion points only</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
       

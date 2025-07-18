@@ -15,7 +15,7 @@ export async function GET() {
     // Get the webhook URL
     const webhookUrl = process.env.NEXT_PUBLIC_URL 
       ? `${process.env.NEXT_PUBLIC_URL}/api/webhooks/cal` 
-      : "https://cal.softx.ca/api/webhooks/cal";
+      : "https://notioniq.co/api/webhooks/cal";
     
     // Get the webhook secret
     const webhookSecret = process.env.CAL_WEBHOOK_SECRET;

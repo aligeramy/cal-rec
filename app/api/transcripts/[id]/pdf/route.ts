@@ -16,6 +16,19 @@ export async function GET(
     }
 
     const { id } = await params;
+    
+    // Parse URL to get query parameters
+    const url = new URL(req.url);
+    const templateParam = url.searchParams.get('template');
+    const template = templateParam ? parseInt(templateParam) as 1 | 2 | 3 | 4 : 1;
+    
+    // Validate template parameter
+    if (template < 1 || template > 4) {
+      return NextResponse.json(
+        { error: 'Invalid template. Must be 1, 2, 3, or 4.' },
+        { status: 400 }
+      );
+    }
 
     // Get the transcript from database
     const transcript = await prisma.meetingTranscript.findUnique({
@@ -29,13 +42,14 @@ export async function GET(
       );
     }
 
-    console.log('📄 Generating comprehensive PDF for transcript:', id);
+    console.log(`📄 Generating PDF with template ${template} for transcript:`, id);
 
-    // Generate PDF with both conversation overview and full transcript
+    // Generate PDF with selected template
     const pdfBuffer = await generateTranscriptPDF(transcript, {
       includeNotes: true,
       includeTranscript: true,
       includeMetadata: true,
+      template: template,
     });
 
     console.log('✅ PDF generated successfully');
@@ -45,7 +59,7 @@ export async function GET(
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="transcript-${transcript.title || 'untitled'}-${id}.pdf"`,
+        'Content-Disposition': `inline; filename="transcript-${transcript.title || 'untitled'}-template${template}-${id}.pdf"`,
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0',

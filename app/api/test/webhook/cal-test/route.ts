@@ -10,7 +10,7 @@ export async function GET() {
     // Get the webhook endpoint URL
     const webhookUrl = process.env.NEXT_PUBLIC_URL 
       ? `${process.env.NEXT_PUBLIC_URL}/api/webhooks/cal` 
-      : "https://cal.softx.ca/api/webhooks/cal";
+      : "https://notioniq.co/api/webhooks/cal";
     
     // Create a sample RECORDING_READY event
     const recordingReadyPayload = {

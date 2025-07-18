@@ -38,8 +38,8 @@ export async function GET() {
   // Provide the information for manual testing
   return NextResponse.json({
     message: "Use this information to test the webhook manually with cURL or Postman",
-    curl_command: `curl -X POST ${process.env.NEXT_PUBLIC_URL || "https://cal.softx.ca"}/api/webhooks/cal -H "cal-signature: ${signature}" -H "Content-Type: application/json" -d '${payloadString}'`,
-    webhook_url: `${process.env.NEXT_PUBLIC_URL || "https://cal.softx.ca"}/api/webhooks/cal`,
+    curl_command: `curl -X POST ${process.env.NEXT_PUBLIC_URL || "https://notioniq.co"}/api/webhooks/cal -H "cal-signature: ${signature}" -H "Content-Type: application/json" -d '${payloadString}'`,
+    webhook_url: `${process.env.NEXT_PUBLIC_URL || "https://notioniq.co"}/api/webhooks/cal`,
     headers: {
       "cal-signature": signature,
       "Content-Type": "application/json"
